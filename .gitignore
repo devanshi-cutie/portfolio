@@ -52,3 +52,5 @@ next-env.d.ts
 
 # Supabase CLI local cache
 /supabase/.temp/
+
+.tokencap
