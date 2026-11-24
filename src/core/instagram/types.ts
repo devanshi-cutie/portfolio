@@ -1,12 +1,12 @@
 /*
- * Client-safe shapes for the Instagram integration. Nothing here carries the
- * access token: the token lives only in `public.integrations` and in server
- * memory while a request runs.
+ * Client-safe shapes for the Instagram integration. The access token lives only
+ * in the INSTAGRAM_ACCESS_TOKEN env var and is read by server-only code; nothing
+ * here carries it.
  */
 
 import type { StatSource } from "@/core/types/content";
 
-/** The stat sources whose values come from Instagram (stored, updated on approval). */
+/** The stat sources whose values come from Instagram (stored in settings, updated on approval). */
 export type InstagramStatSource = Extract<StatSource, `instagram.${string}`>;
 
 export const INSTAGRAM_STAT_SOURCES: readonly InstagramStatSource[] = [
@@ -23,9 +23,10 @@ export function isInstagramSource(source: StatSource | undefined): source is Ins
 /** Numbers read from Instagram in one fetch. Views are null when insights are unavailable. */
 export interface InstagramSnapshot {
   username: string;
-  followers: number;
+  /** null when Instagram didn't return it */
+  followers: number | null;
   /** media_count: every post on the profile (photos, carousels, reels) */
-  posts: number;
+  posts: number | null;
   /** reels found among the scanned media */
   reels: number;
   /** sum of `views` across the scanned reels that returned insights */
@@ -42,18 +43,15 @@ export interface InstagramSnapshot {
   warnings: string[];
 }
 
-/** What the admin page knows about the connection. Never includes the token. */
+/** Why a refresh failed, when the fix is a new token in Vercel. */
+export type InstagramFailReason = "token" | "permission";
+
+/** What the admin page knows about the Instagram setup. Never includes the token or any part of it. */
 export interface InstagramStatus {
-  /** Supabase service role configured, so a connection can be stored */
+  /** INSTAGRAM_ACCESS_TOKEN is set on the server */
+  configured: boolean;
+  /** Supabase service role configured, so "Update website" can save */
   storageReady: boolean;
-  connected: boolean;
-  /** "admin": pasted in the admin panel; "env": INSTAGRAM_ACCESS_TOKEN */
-  source: "admin" | "env" | null;
-  username: string | null;
-  /** ISO time the token stops working (estimated when Instagram didn't say) */
-  expiresAt: string | null;
-  tokenUpdatedAt: string | null;
-  lastSnapshot: InstagramSnapshot | null;
 }
 
 /** One existing stat whose source is instagram.*: what the site shows vs what Instagram says. */
@@ -79,8 +77,12 @@ export interface InstagramReview {
   additions: InstagramAdditionRow[];
 }
 
-/** What the admin ticked in the review table. Values are recomputed on the server. */
+/**
+ * What the admin ticked in the review table, with the raw metric numbers from
+ * the fetch (nothing is stored between Refresh and Update). The server
+ * validates them and formats the display values itself.
+ */
 export interface InstagramApplySelection {
-  update: { index: number; source: InstagramStatSource }[];
-  add: InstagramStatSource[];
+  update: { index: number; source: InstagramStatSource; value: number }[];
+  add: { source: InstagramStatSource; value: number }[];
 }

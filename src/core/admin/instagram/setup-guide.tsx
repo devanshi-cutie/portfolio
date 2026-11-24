@@ -22,7 +22,7 @@ const Code = ({ children }: { children: ReactNode }) => (
   <code className="rounded bg-(--a-muted) px-1 py-0.5 text-[0.85em] text-(--a-ink)">{children}</code>
 );
 
-/** One-time setup steps for the official Instagram API with Instagram Login. */
+/** Setup steps for the official Instagram API with Instagram Login; the token goes into Vercel, not this panel. */
 export function SetupGuide({ handle }: { handle: string }) {
   const at = handle ? `@${handle}` : "your Instagram account";
   const steps: { title: string; body: ReactNode }[] = [
@@ -60,17 +60,26 @@ export function SetupGuide({ handle }: { handle: string }) {
         <>
           Make sure the permissions include <Code>instagram_business_basic</Code> and{" "}
           <Code>instagram_business_manage_insights</Code> (the second one is needed for reel views), then click{" "}
-          <em>Generate token</em> next to the account and copy it. Dashboard tokens already last 60 days; there&apos;s no
-          extra exchange step.
+          <em>Generate token</em> next to the account and copy it. There&apos;s no extra exchange step.
         </>
       ),
     },
     {
-      title: "Paste it below and connect",
+      title: "Add it to Vercel and redeploy",
       body: (
         <>
-          This site checks the token with Instagram and stores it on the server. Each time you fetch, it renews the token
-          for another 60 days, so fetching at least once every two months keeps the connection alive.
+          In Vercel → your project → <em>Settings → Environment Variables</em>, add <Code>INSTAGRAM_ACCESS_TOKEN</Code>{" "}
+          with the token as its value for <em>Production</em>, save, then redeploy (Deployments → … → <em>Redeploy</em>).
+          The token stays on the server; this page never shows it.
+        </>
+      ),
+    },
+    {
+      title: "Replace it every 60 days",
+      body: (
+        <>
+          The token expires 60 days after you generate it and isn&apos;t renewed automatically. When Refresh says it has
+          expired, generate a new one (step 4), replace the value in Vercel and redeploy.
         </>
       ),
     },

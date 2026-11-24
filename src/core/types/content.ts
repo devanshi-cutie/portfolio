@@ -210,7 +210,7 @@ export interface BrandGroup {
 
 /**
  * Where a stat's number comes from. "manual" (or absent) shows `value` as typed.
- * - "instagram.*": `value` is stored; the admin's "Fetch from Instagram" fills
+ * - "instagram.*": `value` is stored; the admin's "Refresh from Instagram" fills
  *   in fresh numbers for review and "Update website" writes them into `value`.
  * - "site.*": counted from this site's own published content at render time,
  *   falling back to `value`.

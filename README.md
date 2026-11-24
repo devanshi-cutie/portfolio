@@ -101,35 +101,35 @@ Go to `/admin` and enter the password; the sign-in page greets her by name with 
 - **Collections**: the work categories (Jewellery, Real estate…) and their covers
 - **Brands**: add brands she has worked with, upload logos, tag UGC/Instagram, feature, reorder
 - **Testimonials** and **Inquiries** (messages from the contact form)
-- **Instagram**: fetch her current followers, posts and reel views from Instagram, compare them with the numbers on the site, and update the ones she ticks (see below)
+- **Instagram**: click Refresh to get her current followers, posts and reel views from Instagram, compare them with the numbers on the site, and update the ones she ticks (see below)
 
 Changes go live on the public site straight away. The link preview card (what WhatsApp, Instagram, LinkedIn and X show when the site is shared) is generated from her name, tagline, featured brands and portrait (or the share image set under Profile & SEO); it refreshes on the next deploy, and the apps themselves cache previews for a while. If you ever edit data directly in Supabase or re-run the seed after deploying, press **Refresh live site** on the admin dashboard.
 
 ## Instagram numbers (official API)
 
-The Numbers section can show Instagram followers, posts, total reel views and top-reel views. They come from Meta's free, official **Instagram API with Instagram Login** (`graph.instagram.com`): no scraping and no password sharing. The site never calls Instagram on its own. In the admin she clicks **Fetch from Instagram**, checks the new numbers next to the ones on the site, and clicks **Update website**.
+The Numbers section can show Instagram followers, posts, total reel views and top-reel views. They come from Meta's free, official **Instagram API with Instagram Login** (`graph.instagram.com`): no scraping and no password sharing. The site never calls Instagram on its own (nothing on a schedule, nothing when a page loads). In the admin she clicks **Refresh from Instagram**, checks the new numbers next to the ones on the site, and clicks **Update website**. Nothing fetched is stored until then.
 
-**Needs:** a public Instagram **Professional** account (Creator or Business; switching is free in the Instagram app) and a free Meta developer app. Supabase must be configured, because the token is stored in the `integrations` table.
+**Needs:** a public Instagram **Professional** account (Creator or Business; switching is free in the Instagram app), a free Meta developer app, and the token in Vercel as `INSTAGRAM_ACCESS_TOKEN`. Without the token the Refresh button is disabled and the site keeps the numbers typed in Page sections.
 
-**One-time setup** (the same steps are shown on Admin → Instagram):
+**Setup** (the same steps are shown on Admin → Instagram):
 
 1. Instagram app → Settings → *Account type and tools* → *Switch to professional account* → Creator.
 2. [developers.facebook.com/apps](https://developers.facebook.com/apps) → *Create app* → use case **Other** → app type **Business**.
 3. Add the **Instagram** product → *API setup with Instagram login* → under *Generate access tokens*, click **Add account** and log in as her account. Your own account works with Standard Access, so no App Review is needed.
-4. Make sure the permissions include `instagram_business_basic` and `instagram_business_manage_insights` (needed for reel views), click **Generate token** and copy it. Dashboard tokens are already long-lived (60 days). There's no exchange step and no app secret involved.
-5. Paste it on Admin → Instagram and click **Connect**. The site checks it with Instagram before saving.
+4. Make sure the permissions include `instagram_business_basic` and `instagram_business_manage_insights` (needed for reel views), click **Generate token** and copy it. Dashboard tokens are long-lived (60 days). There's no exchange step and no app secret involved.
+5. In Vercel → **Settings → Environment Variables**, add `INSTAGRAM_ACCESS_TOKEN` with that token for **Production**, then redeploy. The token is server-only; the admin panel never shows it.
 
 If the dashboard asks for an Instagram tester: *App roles → Roles* → add her as an Instagram Tester, then accept in Instagram → Settings → *Website permissions* → *Apps and websites* → *Tester invites*.
 
-**Keeping it alive:** tokens last 60 days. Every fetch renews the token (once it's a day old) for another 60 days, so fetching at least once every two months keeps the connection working. An expired token can't be renewed: generate a new one and connect again. The admin page shows the expiry date and warns two weeks ahead.
+**Every 60 days:** the token expires 60 days after it's generated and the site does **not** renew it. When Refresh says the token has expired (or was revoked), generate a new one (step 4), replace `INSTAGRAM_ACCESS_TOKEN` in Vercel and redeploy. The numbers already on the site are unaffected while the token is expired.
 
-**What's fetched:** followers and total posts (profile counts). The latest 200 posts are scanned for reels; each reel's lifetime `views` insight is summed for "views across my reels", and the highest single reel is "top reel views". Instagram can take up to 48 hours to update view counts. Reels posted before the account became professional may have no insights; they're left out, and the page says how many.
+**A token pasted in an earlier version:** the admin briefly stored a pasted token in the database. Dropping that table (migration `20261125020000_drop_integrations.sql`) deletes it but doesn't revoke it. To cut it off now, remove the app in Instagram → Settings → *Apps and websites*; otherwise it simply expires 60 days after it was generated.
 
-**What isn't:** stories, likes, comments, follower demographics, other people's accounts, and anything live at page load. Brand and reel counts don't come from Instagram: set a number's source to *Brands on this site* or *Reels on this site* and it's counted from the published content automatically.
+**What's fetched on Refresh:** followers and total posts (profile counts). The latest 200 posts are scanned for reels; each reel's lifetime `views` insight is summed for "views across my reels", and the highest single reel is "top reel views". A refresh stops after about 40 seconds and shows what it got, with a note. Instagram can take up to 48 hours to update view counts. Reels posted before the account became professional may have no insights; they're left out, and the page says how many.
+
+**What isn't:** stories, likes, comments, follower demographics, other people's accounts, and anything automatic. Brand and reel counts don't come from Instagram: set a number's source to *Brands on this site* or *Reels on this site* and it's counted from the published content automatically.
 
 **Choosing which numbers update:** in Page sections → Numbers, each number has a **Source**: typed by hand, one of the Instagram metrics, or one of the site counts. Only numbers with an Instagram source appear in the review table, and the table can add a missing Instagram metric to the list. Labels and order are still edited in Page sections.
-
-`INSTAGRAM_ACCESS_TOKEN` in `.env.example` is an optional alternative to pasting the token in the admin. It's server-only, and a token saved in the admin wins.
 
 ## 7. Reusing this for another creator
 

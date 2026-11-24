@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowRight, Check, ExternalLink, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
 import { applyInstagram } from "@/core/actions/instagram";
+import { buildReview, metricFor } from "@/core/instagram/format";
 import type { InstagramApplySelection, InstagramReview, InstagramSnapshot } from "@/core/instagram/types";
 import { LocalDateTime } from "../inquiries/local-date";
 import { cn } from "../lib/cn";
@@ -76,31 +77,39 @@ export function ReviewTable({
       return next;
     });
 
-  const selection = useMemo<InstagramApplySelection>(
-    () => ({
-      update: review.rows.filter((r) => selected.has(rowKey(r.index))).map((r) => ({ index: r.index, source: r.source })),
-      add: review.additions.filter((a) => selected.has(addKey(a.source))).map((a) => a.source),
-    }),
-    [review, selected],
-  );
+  // Ticked rows with the raw counts from this refresh; the server validates and formats them.
+  const selection = useMemo<InstagramApplySelection>(() => {
+    const update: InstagramApplySelection["update"] = [];
+    for (const r of review.rows) {
+      const value = metricFor(snapshot, r.source);
+      if (selected.has(rowKey(r.index)) && value !== null) update.push({ index: r.index, source: r.source, value });
+    }
+    const add: InstagramApplySelection["add"] = [];
+    for (const a of review.additions) {
+      const value = metricFor(snapshot, a.source);
+      if (selected.has(addKey(a.source)) && value !== null) add.push({ source: a.source, value });
+    }
+    return { update, add };
+  }, [review, selected, snapshot]);
   const count = selection.update.length + selection.add.length;
   const hasRows = review.rows.length > 0 || review.additions.length > 0;
 
   async function apply() {
     const result = await run(() => applyInstagram(selection), { key: "apply" });
     if (!result.ok) return;
-    onApplied(result.data.review);
+    onApplied(buildReview(result.data.stats, snapshot));
     if (result.data.updated > 0) {
       toast.success("Website updated with the new numbers", {
         description: "Reload any open Page sections tab before saving it, or it will put the old numbers back.",
       });
+    } else {
+      toast.info("Those numbers were already up to date");
     }
-    else toast.info("Those numbers were already up to date");
   }
 
   const facts = [
-    { label: "Followers", value: nf.format(snapshot.followers) },
-    { label: "Posts", value: nf.format(snapshot.posts) },
+    { label: "Followers", value: snapshot.followers === null ? "Not available" : nf.format(snapshot.followers) },
+    { label: "Posts", value: snapshot.posts === null ? "Not available" : nf.format(snapshot.posts) },
     { label: "Reels scanned", value: nf.format(snapshot.reels) },
     { label: "Reel views", value: snapshot.reelViews === null ? "Not available" : nf.format(snapshot.reelViews) },
     { label: "Top reel", value: snapshot.topReelViews === null ? "Not available" : nf.format(snapshot.topReelViews) },
@@ -111,7 +120,7 @@ export function ReviewTable({
       title="Review and update"
       description={
         <>
-          From @{snapshot.username}, fetched <LocalDateTime iso={snapshot.fetchedAt} />. Instagram can take up to 48 hours to
+          From @{snapshot.username}, fetched <LocalDateTime iso={snapshot.fetchedAt} />. Nothing is saved until you click Update website. Instagram can take up to 48 hours to
           update view counts.
         </>
       }

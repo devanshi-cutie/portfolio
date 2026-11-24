@@ -47,11 +47,11 @@ export function friendlyInstagramError(e: unknown): string {
   if (e.kind === "timeout") return "Instagram took too long to answer. Please try again in a minute.";
   if (e.kind === "network") return "Couldn't reach Instagram. Check the connection and try again.";
   if (isTokenError(e)) {
-    return "Instagram says this token has expired or was revoked. Generate a new token in the Meta app dashboard and connect again.";
+    return "The Instagram token in Vercel has expired or was revoked. Generate a new one and replace INSTAGRAM_ACCESS_TOKEN in Vercel, then redeploy.";
   }
-  if (isRateLimitError(e)) return "Instagram's rate limit was reached. Wait an hour or so, then fetch again.";
+  if (isRateLimitError(e)) return "Instagram's rate limit was reached. Wait an hour or so, then refresh again.";
   if (isPermissionError(e)) {
-    return "This token doesn't have the permissions needed. Generate a new token with instagram_business_basic and instagram_business_manage_insights.";
+    return "The Instagram token in Vercel is missing a permission. Generate a new one with instagram_business_basic and instagram_business_manage_insights, replace INSTAGRAM_ACCESS_TOKEN in Vercel, then redeploy.";
   }
   return `Instagram returned an error (code ${e.code}). Please try again later.`;
 }
@@ -126,8 +126,9 @@ export function graphGetUrl<T>(next: string): Promise<T> {
 export interface InstagramProfile {
   userId: string;
   username: string;
-  followers: number;
-  posts: number;
+  /** null when Instagram didn't return the count */
+  followers: number | null;
+  posts: number | null;
 }
 
 /** GET /me?fields=user_id,username,followers_count,media_count */
@@ -146,29 +147,7 @@ export async function getProfile(token: string): Promise<InstagramProfile> {
   return {
     userId,
     username,
-    followers: toNumber(me.followers_count) ?? 0,
-    posts: toNumber(me.media_count) ?? 0,
+    followers: toNumber(me.followers_count),
+    posts: toNumber(me.media_count),
   };
-}
-
-export interface RefreshedToken {
-  accessToken: string;
-  expiresAt: string;
-}
-
-/**
- * GET https://graph.instagram.com/refresh_access_token?grant_type=ig_refresh_token
- * Works on an unexpired long-lived token at least 24 hours old; the new one is valid 60 days.
- * Not versioned in Meta's docs.
- */
-export async function refreshLongLivedToken(token: string): Promise<RefreshedToken> {
-  const url = new URL(`${BASE}/refresh_access_token`);
-  url.searchParams.set("grant_type", "ig_refresh_token");
-  url.searchParams.set("access_token", token);
-  const res = await request<{ access_token?: unknown; expires_in?: unknown }>(url);
-  if (typeof res.access_token !== "string" || res.access_token === "") {
-    throw new InstagramApiError(0, null, "Refresh response missing access_token");
-  }
-  const seconds = toNumber(res.expires_in) ?? 60 * 24 * 60 * 60;
-  return { accessToken: res.access_token, expiresAt: new Date(Date.now() + seconds * 1000).toISOString() };
 }

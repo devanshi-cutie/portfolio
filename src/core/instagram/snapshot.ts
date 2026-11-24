@@ -1,6 +1,6 @@
 import "server-only";
 
-import { getConnection, saveConnection, type InstagramConnection } from "./connection";
+import { instagramToken } from "./config";
 import {
   InstagramApiError,
   getProfile,
@@ -10,76 +10,34 @@ import {
   isRateLimitError,
   isTokenError,
   logInstagramError,
-  refreshLongLivedToken,
 } from "./graph";
 import type { InstagramSnapshot } from "./types";
 
 /*
- * One "Fetch from Instagram": keep the token alive, read the profile counts,
- * page through recent media, read `views` for each reel, store the result as
- * the connection's `lastSnapshot`. Nothing here touches the public site — the
- * admin reviews the numbers and applies them separately.
+ * One "Refresh from Instagram", run only when the admin clicks it: read the
+ * profile counts, page through recent media, read `views` for each reel.
+ * Uses the INSTAGRAM_ACCESS_TOKEN env token as is (no renewal) and stores
+ * nothing; the admin reviews the numbers and applies them separately.
  */
 
-const DAY_MS = 24 * 60 * 60 * 1000;
-const TOKEN_LIFETIME_MS = 60 * DAY_MS;
 /** Media items scanned per fetch (newest first). */
 const MEDIA_CAP = 200;
 const PAGE_SIZE = 100;
 /** Parallel insights requests. */
 const CONCURRENCY = 6;
 /**
- * One budget for the whole fetch (refresh, profile, media paging, insights).
- * No new Graph request starts after it; what finished is returned with a
- * warning. With the 8 s per-request timeout and the final save this stays under
- * the page's `maxDuration = 60` (src/app/admin/(panel)/instagram/page.tsx).
+ * One budget for the whole fetch (profile, media paging, insights). No new
+ * Graph request starts after it; what finished is returned with a warning.
+ * With the 8 s per-request timeout this stays well under the page's
+ * `maxDuration = 60` (src/app/admin/(panel)/instagram/page.tsx).
  */
 const FETCH_BUDGET_MS = 40_000;
 
-export class InstagramNotConnectedError extends Error {
+/** INSTAGRAM_ACCESS_TOKEN is not set. */
+export class InstagramNotConfiguredError extends Error {
   constructor() {
-    super("Instagram is not connected");
-    this.name = "InstagramNotConnectedError";
-  }
-}
-
-/** An expired token can't be refreshed; report it the same way Meta does (code 190). */
-function assertNotExpired(conn: InstagramConnection): void {
-  if (conn.expiresAt && Date.parse(conn.expiresAt) <= Date.now()) {
-    throw new InstagramApiError(190, null, "Stored token is past its expiry");
-  }
-}
-
-/**
- * Refreshes the long-lived token when it is at least 24 hours old (Meta's
- * minimum). A refreshed token is valid for 60 days from now, so fetching at
- * least once every 60 days keeps the connection alive. A failed refresh is
- * logged and the current token is used as is.
- */
-export async function ensureFreshToken(conn: InstagramConnection): Promise<{ conn: InstagramConnection; refreshed: boolean }> {
-  assertNotExpired(conn);
-  const issued = conn.tokenUpdatedAt ? Date.parse(conn.tokenUpdatedAt) : Number.NaN;
-  if (Number.isFinite(issued) && Date.now() - issued < DAY_MS) return { conn, refreshed: false };
-  try {
-    const next = await refreshLongLivedToken(conn.accessToken);
-    return {
-      conn: { ...conn, accessToken: next.accessToken, expiresAt: next.expiresAt, tokenUpdatedAt: new Date().toISOString() },
-      refreshed: true,
-    };
-  } catch (err) {
-    // Not fatal here: a genuinely dead token fails the /me call next with a clear 190.
-    logInstagramError("token refresh", err, conn.accessToken);
-    return { conn, refreshed: false };
-  }
-}
-
-/** Token just pasted from the dashboard: try a refresh (exact expiry), else assume 60 days from now. */
-export async function expiryForNewToken(token: string): Promise<{ accessToken: string; expiresAt: string }> {
-  try {
-    return await refreshLongLivedToken(token);
-  } catch {
-    // Usually "token too new to refresh" (it was issued within the last day); /me already proved it works.
-    return { accessToken: token, expiresAt: new Date(Date.now() + TOKEN_LIFETIME_MS).toISOString() };
+    super("INSTAGRAM_ACCESS_TOKEN is not set");
+    this.name = "InstagramNotConfiguredError";
   }
 }
 
@@ -148,37 +106,22 @@ async function pool<T>(items: T[], limit: number, fn: (item: T) => Promise<void>
 }
 
 /**
- * Fetches fresh numbers and stores them as `lastSnapshot`. Throws
- * `InstagramNotConnectedError`, `InstagramApiError` (token, rate limit, network)
- * or a database error; missing insights permission is a warning, not a failure.
+ * Fetches fresh numbers with the env token. Throws `InstagramNotConfiguredError`
+ * or `InstagramApiError` (token, rate limit, network); missing insights
+ * permission and running out of time are warnings, not failures.
  */
 export async function fetchInstagramSnapshot(): Promise<InstagramSnapshot> {
   const deadline = Date.now() + FETCH_BUDGET_MS;
-  const stored = await getConnection();
-  if (!stored) throw new InstagramNotConnectedError();
-
-  const { conn: fresh, refreshed } = await ensureFreshToken(stored);
-  let conn = fresh;
-  const token = conn.accessToken;
-
-  // Store a refreshed token before any other Graph call: the old one may stop
-  // working, and a failure below must not lose the new one.
-  if (refreshed) {
-    const saved = await saveConnection(conn);
-    if (!saved.ok) console.error("[instagram] could not store the refreshed token");
-  }
+  const token = instagramToken();
+  if (!token) throw new InstagramNotConfiguredError();
 
   try {
     const profile = await getProfile(token);
-    const identityChanged = conn.userId !== profile.userId || conn.username !== profile.username;
-    conn = { ...conn, userId: profile.userId, username: profile.username };
-    // An env token (or a renamed account) is recorded now, before the slower media scan.
-    if (conn.source === "env" || identityChanged) {
-      const saved = await saveConnection(conn);
-      if (!saved.ok) console.error("[instagram] could not store the connection");
-    }
 
     const warnings: string[] = [];
+    if (profile.followers === null || profile.posts === null) {
+      warnings.push("Instagram didn't return the follower or post count this time, so it's shown as not available.");
+    }
     let media: MediaList;
     let typeKnown = true;
     try {
@@ -193,7 +136,7 @@ export async function fetchInstagramSnapshot(): Promise<InstagramSnapshot> {
       warnings.push(`Only the latest ${MEDIA_CAP} posts were scanned, so older reels aren't in the views total.`);
     } else if (media.stopped === "time") {
       warnings.push(
-        `Instagram was slow, so only the latest ${media.items.length} posts were scanned before the time limit; older reels aren't in the views total. Fetch again later for a fuller count.`,
+        `Instagram was slow, so only the latest ${media.items.length} posts were scanned before the time limit; older reels aren't in the views total. Refresh again later for a fuller count.`,
       );
     }
 
@@ -219,7 +162,7 @@ export async function fetchInstagramSnapshot(): Promise<InstagramSnapshot> {
           : "No reels were found among the scanned posts, so reel views weren't calculated.",
       );
     } else if (Date.now() > deadline) {
-      warnings.push("Ran out of time before reading reel views; followers and posts are up to date. Fetch again for views.");
+      warnings.push("Ran out of time before reading reel views; followers and posts are up to date. Refresh again for views.");
     } else {
       const one = async (reel: MediaRow) => {
         try {
@@ -254,7 +197,7 @@ export async function fetchInstagramSnapshot(): Promise<InstagramSnapshot> {
       if (tally.noPermission && tally.counted === 0) {
         warnings.push(
           "Reel views aren't available: this token doesn't include the instagram_business_manage_insights permission. " +
-            "Generate a new token with insights enabled and connect again.",
+            "Generate a new token with insights enabled, replace INSTAGRAM_ACCESS_TOKEN in Vercel and redeploy.",
         );
         tally.top = null;
         tally.topLink = null;
@@ -289,15 +232,6 @@ export async function fetchInstagramSnapshot(): Promise<InstagramSnapshot> {
       warnings,
     };
 
-    const saved = await saveConnection({
-      accessToken: conn.accessToken,
-      userId: conn.userId,
-      username: conn.username,
-      tokenUpdatedAt: conn.tokenUpdatedAt,
-      expiresAt: conn.expiresAt,
-      lastSnapshot: snapshot,
-    });
-    if (!saved.ok) throw new Error(saved.error);
     return snapshot;
   } catch (err) {
     if (err instanceof InstagramApiError) logInstagramError("fetch", err, token);
