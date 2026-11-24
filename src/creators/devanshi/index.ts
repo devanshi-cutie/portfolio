@@ -15,6 +15,19 @@ const devanshi: CreatorPackage = {
   brands,
   testimonials,
   media,
+  admin: {
+    loginConsent: {
+      label:
+        "I agree and accept that I LIKE Aditya Gangwani (ADDI) from the bottom of my heart, and I can't live a single day without remembering him at least 10 times a day 💘",
+      error: "Sorry, you need to like him. Otherwise fuck off from here 😤",
+    },
+    counter: {
+      key: "likes-addi",
+      label: "times Devanshi agreed she likes ADDI",
+      perLogin: 10,
+      perView: 1,
+    },
+  },
 };
 
 export default devanshi;
