@@ -33,20 +33,7 @@ export function Hero({ content, section }: { content: SiteContent; section: Sect
     >
       <div className="mx-auto grid max-w-[1320px] items-center gap-8 md:gap-12 lg:grid-cols-[1.2fr_1fr] lg:gap-8">
         <div className="relative min-w-0">
-          {contact.availability ? (
-            <p
-              className="sb-rise inline-flex max-w-full items-center gap-2.5 rounded-full border border-(--line) bg-(--card) px-3.5 py-1.5 text-[0.78rem] font-semibold md:px-4 md:py-2 md:text-[0.8125rem]"
-              style={d(0)}
-            >
-              <span className="relative flex size-2" aria-hidden>
-                <span className="absolute inset-0 rounded-full bg-[#2f8f5b] motion-safe:animate-ping motion-safe:[animation-duration:2.4s]" />
-                <span className="relative size-2 rounded-full bg-[#2f8f5b]" />
-              </span>
-              {contact.availability}
-            </p>
-          ) : null}
-
-          <h1 id="hero-title" className="sb-display sb-rise mt-5 text-balance text-[clamp(3.1rem,8.4vw,7.25rem)] md:mt-7" style={d(60)}>
+          <h1 id="hero-title" className="sb-display sb-rise text-balance text-[clamp(3.1rem,8.4vw,7.25rem)] md:mt-7" style={d(60)}>
             {first}
             {rest ? (
               <>
@@ -95,6 +82,43 @@ export function Hero({ content, section }: { content: SiteContent; section: Sect
               @{identity.handle}
             </ButtonLink>
           </div>
+
+          {contact.availability ? (
+            /* A margin note instead of a status pill: a hand-drawn arrow curls up to the
+               main button and the availability line gets an underline that draws itself. */
+            <p className="sb-rise relative mt-4 flex max-w-[32ch] items-start gap-2 pl-1 md:mt-5" style={d(300)}>
+              <svg
+                viewBox="0 0 56 48"
+                aria-hidden
+                className="sb-draw mt-[-0.35rem] h-9 w-11 shrink-0 text-(--rose-deep) md:h-10 md:w-12"
+                style={d(700)}
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2.2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path pathLength={1} d="M50 42C36 41 22 35 14 25 9 19 7 12 7 5" />
+                <path pathLength={1} d="M2.5 11.5C4 9 5.6 6.6 7 4.2c2 2.2 4.3 4.3 6.8 6" />
+              </svg>
+              <span className="sb-accent relative text-[1.05rem] leading-snug text-(--rose-deep) md:text-[1.15rem]">
+                {contact.availability}
+                <svg
+                  viewBox="0 0 220 12"
+                  aria-hidden
+                  preserveAspectRatio="none"
+                  className="sb-draw absolute -bottom-2 left-0 h-2.5 w-[min(100%,15rem)] text-(--rose)"
+                  style={d(1000)}
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2.6}
+                  strokeLinecap="round"
+                >
+                  <path pathLength={1} d="M3 8c34-4 71-6 110-5 36 1 70 2 104 0" />
+                </svg>
+              </span>
+            </p>
+          ) : null}
         </div>
 
         <div className="relative">

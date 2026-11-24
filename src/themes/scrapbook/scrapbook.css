@@ -249,8 +249,29 @@ html:has([data-theme="scrapbook"]) {
 .sb-spin {
   animation: sb-spin 22s linear infinite;
 }
+/* hand-drawn doodles that draw themselves once (paths carry pathLength="1") */
+@keyframes sb-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+.sb-draw path {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: sb-draw 650ms cubic-bezier(0.65, 0, 0.35, 1) forwards;
+  animation-delay: var(--d, 0ms);
+}
+/* the next stroke (e.g. an arrowhead) follows the previous one, like a pen */
+.sb-draw path + path {
+  animation-duration: 250ms;
+  animation-delay: calc(var(--d, 0ms) + 600ms);
+}
 
 @media (prefers-reduced-motion: reduce) {
+  .sb-draw path {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
   .sb-rise,
   .sb-phone-in {
     animation: sb-fade 300ms ease-out both;
