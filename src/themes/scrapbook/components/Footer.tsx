@@ -1,4 +1,5 @@
 import { ArrowUpRight } from "lucide-react";
+import { SITE_CREDIT } from "@/core/lib/credit";
 import type { SiteContent } from "@/core/types/content";
 import { instagramUrl } from "../lib/media";
 import { Heart } from "./Doodles";
@@ -6,7 +7,8 @@ import { Heart } from "./Doodles";
 /** Peak-end: a lace-edged rose page with a big italic "Thank you". */
 export function Footer({ content }: { content: SiteContent }) {
   const { identity } = content.settings;
-  const socials = content.settings.socials.filter((s) => s.url);
+  // social profiles only; website / portfolio links (e.g. the media kit) live in Contact and Services
+  const socials = content.settings.socials.filter((s) => s.url && s.platform !== "website");
   const ig = instagramUrl(content);
   return (
     <footer className="sb-on-dark sb-lace relative mt-10 bg-(--rose-deep) px-(--gutter) pb-[calc(2.5rem+env(safe-area-inset-bottom))] pt-20 text-(--cream) md:pt-24">
@@ -46,6 +48,18 @@ export function Footer({ content }: { content: SiteContent }) {
             </ul>
           ) : null}
         </div>
+
+        <p className="mt-6 text-xs text-(--cream)">
+          Built by{" "}
+          <a
+            href={SITE_CREDIT.url}
+            target="_blank"
+            rel="noopener"
+            className="font-semibold underline decoration-(--blush)/60 underline-offset-2 hover:decoration-(--blush)"
+          >
+            {SITE_CREDIT.label}
+          </a>
+        </p>
       </div>
     </footer>
   );
