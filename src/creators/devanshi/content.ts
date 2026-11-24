@@ -274,8 +274,8 @@ export const media: MediaSeed[] = [
   { source: "Create n beyond agency/1788350508039385.mp4", kind: "reel", title: "Create n Beyond reel 2", collection: "create-n-beyond", brand: "create-n-beyond" },
   { source: "Create n beyond agency/1788357856833498.mp4", kind: "reel", title: "Create n Beyond reel 3", collection: "create-n-beyond", brand: "create-n-beyond" },
 
-  // Portrait (a still from her talking-head reel; used for the about section and the admin login)
-  { source: "portrait-devanshi.jpg", kind: "portrait", title: "Devanshi Jain", alt: "Portrait of Devanshi Jain smiling" },
+  // Portrait (a still from her outdoor city shoot; used for the about section and the admin login — not shown in BTS)
+  { source: "portrait-devanshi.jpg", kind: "portrait", title: "Devanshi Jain", alt: "Devanshi Jain smiling beside a flower stall in a floral top" },
 
   // Behind the scenes
   { source: "IMG_3603.JPG.jpeg", kind: "bts", title: "On set — bedroom shoot", alt: "Devanshi seated on a bed while a cameraman films her on a set with studio lights", collection: "behind-the-scenes" },

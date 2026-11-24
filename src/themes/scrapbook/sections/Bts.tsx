@@ -6,7 +6,7 @@ import { SectionHeading } from "../components/SectionHeading";
 import { indexContent, instagramUrl, isVideo, metaOf } from "../lib/media";
 
 export function Bts({ content, section }: { content: SiteContent; section: SectionConfig }) {
-  const items = content.media.filter((m) => m.kind === "bts" || (m.kind === "portrait" && !isVideo(m)));
+  const items = content.media.filter((m) => m.kind === "bts");
   if (!items.length) return null;
   const photos = items.filter((m) => !isVideo(m));
   const clips = items.filter(isVideo);

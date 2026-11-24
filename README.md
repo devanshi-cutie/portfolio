@@ -39,7 +39,7 @@ Open http://localhost:3000. With no environment variables set, the site runs in 
 
 ### Supabase
 1. Create a project at [supabase.com](https://supabase.com).
-2. Open **SQL Editor**, paste the whole of `supabase/migrations/20261124000000_init.sql`, and run it.
+2. Create the tables: push the repo to GitHub with the `SUPABASE_DB_URL` secret set (see **Database changes** below) and the workflow applies every migration, or paste `supabase/migrations/20261124000000_init.sql` into **SQL Editor** and run it.
 3. From **Project Settings → API**, copy the project URL, the `anon` (publishable) key and the `service_role` (secret) key.
 
 ### Cloudinary
@@ -80,6 +80,15 @@ The dry run checks every file and shows the plan without touching the network. T
 2. In Vercel, **Add New → Project**, import the repo (framework: Next.js, defaults are fine).
 3. Add every variable from `.env.local` under **Settings → Environment Variables**. Set `NEXT_PUBLIC_SITE_URL` to the production URL. **`ADMIN_PASSWORD` lives here.**
 4. Deploy. To change the admin password later, edit `ADMIN_PASSWORD` in Vercel and redeploy; everyone gets signed out.
+
+## Database changes (automatic migrations)
+
+`.github/workflows/supabase-migrations.yml` runs on every push to `main`. It checks `supabase/migrations/` and applies any SQL file the database hasn't run yet (the Supabase CLI keeps a history table, so each file runs once). When nothing is new it does nothing.
+
+- **One-time setup:** in GitHub → **Settings → Secrets and variables → Actions**, add `SUPABASE_DB_URL` = the **Session pooler** connection string (Supabase → **Connect** → Session pooler, with your database password filled in). The "Direct connection" string won't work from GitHub.
+- **To change the database:** add a new file `supabase/migrations/<YYYYMMDDHHMMSS>_<what>.sql`, commit and push. Never edit a file that has already run.
+- Keep changes backwards-compatible (add columns/tables before the code that needs them), because Vercel deploys the new code at the same time.
+- You can re-run it by hand from the **Actions** tab (**Run workflow**).
 
 ## 6. Using the admin panel
 

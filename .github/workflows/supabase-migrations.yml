@@ -1,0 +1,63 @@
+# Applies new SQL migrations in supabase/migrations/ to the production Supabase
+# database on every push to main. The Supabase CLI records applied migrations in
+# the database (supabase_migrations.schema_migrations), so each file runs exactly
+# once; when nothing is new, the job just reports "up to date".
+#
+# One-time setup: GitHub repo → Settings → Secrets and variables → Actions →
+# New repository secret:
+#   SUPABASE_DB_URL = the Session pooler connection string, e.g.
+#   postgresql://postgres.<project-ref>:<db-password>@aws-1-<region>.pooler.supabase.com:5432/postgres
+# (Supabase → Connect → Session pooler. The "Direct connection" host is IPv6-only
+#  and cannot be reached from GitHub's runners.)
+#
+# Adding a database change: create supabase/migrations/<YYYYMMDDHHMMSS>_<name>.sql,
+# commit and push. Never edit a migration that has already been applied.
+
+name: Supabase migrations
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Never run two migration jobs against the database at the same time.
+concurrency:
+  group: supabase-migrations
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  migrate:
+    name: Apply pending migrations
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check the database secret
+        run: |
+          if [ -z "$SUPABASE_DB_URL" ]; then
+            echo "::error title=Missing secret::Add the SUPABASE_DB_URL repository secret (Session pooler connection string). See the comment at the top of this workflow."
+            exit 1
+          fi
+          case "$SUPABASE_DB_URL" in
+            *@db.*.supabase.co*) echo "::error title=Wrong connection string::SUPABASE_DB_URL is the Direct connection (IPv6-only). Use the Session pooler string from Supabase → Connect."; exit 1 ;;
+          esac
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 3.3.0
+
+      - name: Migrations to apply
+        run: supabase db push --remote="$SUPABASE_DB_URL" --dry-run --agent=no
+
+      - name: Apply migrations
+        run: supabase db push --remote="$SUPABASE_DB_URL" --yes --agent=no
+
+      - name: Migration history
+        if: always()
+        run: supabase migration list --remote="$SUPABASE_DB_URL" --agent=no

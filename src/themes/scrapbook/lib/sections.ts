@@ -1,5 +1,5 @@
 import type { SectionKey, SiteContent } from "@/core/types/content";
-import { isVideo, isWork } from "./media";
+import { isWork } from "./media";
 
 /**
  * Whether a section has anything to show. Section components return null when
@@ -27,7 +27,7 @@ export function hasContent(content: SiteContent, key: SectionKey): boolean {
     case "testimonials":
       return content.testimonials.some((t) => t.quote);
     case "bts":
-      return content.media.some((m) => m.kind === "bts" || (m.kind === "portrait" && !isVideo(m)));
+      return content.media.some((m) => m.kind === "bts");
     default:
       return false;
   }
