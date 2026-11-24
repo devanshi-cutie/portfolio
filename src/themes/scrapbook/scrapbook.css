@@ -1,0 +1,297 @@
+/*
+ * Scrapbook theme. Every rule is scoped under [data-theme="scrapbook"] (or an
+ * `.sb-` class only rendered inside it) so nothing leaks into /admin.
+ * Tokens are plain CSS variables; components use them through Tailwind's
+ * `bg-(--cream)` / `text-(--rose-deep)` syntax.
+ */
+
+[data-theme="scrapbook"] {
+  /* Colours and fonts arrive as inline CSS variables from SiteShell
+     (palette.ts and brand.ts): --cream, --cream-2, --card, --ink, --ink-soft,
+     --rose, --rose-deep, --rose-deeper, --terracotta, --blush, --gold, --line,
+     --brand-font-display, --brand-font-body. Nothing is hard-coded here. */
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
+  --ease-move: cubic-bezier(0.65, 0, 0.35, 1);
+
+  --gutter: clamp(1.25rem, 4vw, 3rem);
+  --nav-h: 4.25rem;
+
+  position: relative;
+  min-height: 100dvh;
+  background: var(--cream);
+  color: var(--ink);
+  font-family: var(--brand-font-body);
+  font-size: 1rem;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow-x: clip;
+}
+
+html:has([data-theme="scrapbook"]) {
+  scroll-padding-top: 5.5rem;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html:has([data-theme="scrapbook"]) {
+    scroll-behavior: smooth;
+  }
+}
+
+[data-theme="scrapbook"] ::selection {
+  background: var(--rose-deep);
+  color: var(--cream);
+}
+
+/* Visible, theme-aware focus ring. Dark bands flip it via --focus. */
+[data-theme="scrapbook"] :focus-visible {
+  outline: 2.5px solid var(--focus, var(--ink));
+  outline-offset: 3px;
+}
+[data-theme="scrapbook"] .sb-on-dark {
+  --focus: var(--cream);
+}
+
+/* ------------------------------------------------------------ typography */
+
+/* Fraunces: soft, high-contrast display serif; optical size follows font size. */
+.sb-display {
+  font-family: var(--brand-font-display);
+  font-weight: 500;
+  font-variation-settings: "SOFT" 30;
+  letter-spacing: -0.025em;
+  line-height: 0.98;
+  font-optical-sizing: auto;
+}
+
+.sb-serif {
+  font-family: var(--brand-font-display);
+  font-optical-sizing: auto;
+}
+
+/* Italic accent (replaces the old script face): Fraunces italic, softened. */
+.sb-accent {
+  font-family: var(--brand-font-display);
+  font-style: italic;
+  font-weight: 400;
+  font-variation-settings: "SOFT" 100;
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+}
+
+.sb-condensed {
+  font-variation-settings: "wdth" 80;
+}
+
+/* -------------------------------------------------------------- textures */
+
+/* Paper grain: a fixed, non-interactive layer, never on a scrolling box. */
+.sb-grain {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  pointer-events: none;
+  opacity: 0.07;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .17 0 0 0 0 .07 0 0 0 0 .1 0 0 0 .9 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+}
+
+/* Perforated postage-stamp edge. The element's padding must equal --r; put
+   real padding on an inner element. Adapted from Temani Afif's CSS shapes. */
+.sb-stamp {
+  --r: 7px;
+  padding: var(--r);
+  -webkit-mask:
+    conic-gradient(#000 0 0) content-box,
+    radial-gradient(farthest-side, #000 97%, #0000) 0 0 / calc(2 * var(--r)) calc(2 * var(--r)) round;
+  mask:
+    conic-gradient(#000 0 0) content-box,
+    radial-gradient(farthest-side, #000 97%, #0000) 0 0 / calc(2 * var(--r)) calc(2 * var(--r)) round;
+}
+
+/* Film strip: sprocket holes along the long edges. */
+.sb-film {
+  --hole: var(--cream);
+  position: relative;
+  background: var(--ink);
+  padding-block: 1.75rem;
+}
+.sb-film::before,
+.sb-film::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 0.6rem;
+  background-image: linear-gradient(90deg, var(--hole) 0 0.8rem, transparent 0.8rem);
+  background-size: 1.45rem 100%;
+  border-radius: 2px;
+  opacity: 0.9;
+  pointer-events: none;
+}
+.sb-film::before {
+  top: 0.55rem;
+}
+.sb-film::after {
+  bottom: 0.55rem;
+}
+/* Washi tape strip. */
+.sb-tape {
+  background: color-mix(in srgb, var(--rose) 62%, transparent);
+  box-shadow: 0 1px 2px rgb(44 17 25 / 0.12);
+  -webkit-mask: conic-gradient(from 45deg at left, #0000, #000 1deg 89deg, #0000 90deg) left / 51% 7px repeat-y,
+    conic-gradient(from -135deg at right, #0000, #000 1deg 89deg, #0000 90deg) right / 51% 7px repeat-y;
+  mask: conic-gradient(from 45deg at left, #0000, #000 1deg 89deg, #0000 90deg) left / 51% 7px repeat-y,
+    conic-gradient(from -135deg at right, #0000, #000 1deg 89deg, #0000 90deg) right / 51% 7px repeat-y;
+}
+
+/* Lace-like scalloped top edge with eyelets (footer). */
+.sb-lace {
+  position: relative;
+  -webkit-mask: radial-gradient(14px at 50% 0, #0000 97%, #000) 50% 0 / 28px 100%;
+  mask: radial-gradient(14px at 50% 0, #0000 97%, #000) 50% 0 / 28px 100%;
+}
+.sb-lace::before {
+  content: "";
+  position: absolute;
+  inset: 1.5rem 0 auto;
+  height: 0.5rem;
+  background: radial-gradient(circle, color-mix(in srgb, var(--rose) 70%, transparent) 2.5px, transparent 3px) 0 0 / 14px 100% repeat-x;
+  pointer-events: none;
+}
+
+/* Phone frame around a 9:16 reel. */
+.sb-phone {
+  position: relative;
+  border-radius: 1.9rem;
+  padding: 0.4rem;
+  background: var(--ink);
+  box-shadow:
+    0 1px 0 rgb(255 255 255 / 0.08) inset,
+    0 18px 40px -18px rgb(44 17 25 / 0.45),
+    0 4px 10px -6px rgb(44 17 25 / 0.35);
+}
+.sb-phone-screen {
+  position: relative;
+  overflow: hidden;
+  border-radius: 1.55rem;
+  aspect-ratio: 9 / 16;
+  background: color-mix(in srgb, var(--ink) 88%, var(--rose-deep));
+  isolation: isolate;
+}
+.sb-phone-notch {
+  position: absolute;
+  top: 0.5rem;
+  left: 50%;
+  z-index: 2;
+  width: 28%;
+  height: 0.9rem;
+  border-radius: 999px;
+  background: var(--ink);
+  transform: translateX(-50%);
+}
+
+/* Polaroid. */
+.sb-polaroid {
+  background: var(--card);
+  padding: 0.65rem 0.65rem 2.6rem;
+  box-shadow:
+    0 1px 2px rgb(44 17 25 / 0.12),
+    0 16px 30px -16px rgb(44 17 25 / 0.4);
+}
+
+/* -------------------------------------------------------------- motion */
+
+@keyframes sb-rise {
+  from {
+    opacity: 0;
+    transform: translateY(0.9em);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes sb-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes sb-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes sb-phone-in {
+  from {
+    opacity: 0;
+    transform: translateY(2.5rem) rotate(var(--rot, 0deg)) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) rotate(var(--rot, 0deg)) scale(1);
+  }
+}
+
+.sb-rise {
+  animation: sb-rise 500ms var(--ease-out) both;
+  animation-delay: var(--d, 0ms);
+}
+.sb-phone-in {
+  animation: sb-phone-in 500ms var(--ease-out) both;
+  animation-delay: var(--d, 0ms);
+}
+.sb-spin {
+  animation: sb-spin 22s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sb-rise,
+  .sb-phone-in {
+    animation: sb-fade 300ms ease-out both;
+  }
+  .sb-spin {
+    animation: none;
+  }
+}
+
+/* Hide the scrollbar on horizontal snap rows (they are still scrollable). */
+.sb-snap-row {
+  scrollbar-width: none;
+}
+.sb-snap-row::-webkit-scrollbar {
+  display: none;
+}
+
+/* Jaipur nod: a faint jaali lattice; the tile is --brand-pattern (palette.ts). */
+.sb-jaali {
+  background-image: var(--brand-pattern);
+  background-size: 48px 48px;
+}
+
+/* Arch mark (nav lockup) and arch frames. */
+.sb-arch {
+  display: inline-block;
+  width: 0.8em;
+  height: 1em;
+  border: 2px solid currentColor;
+  border-bottom: 0;
+  border-radius: 999px 999px 0 0;
+}
+
+/* Horizontal swipe strips: fade the edges so the strip reads as scrollable. */
+.sb-fade-x {
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 var(--gutter), #000 calc(100% - var(--gutter)), transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0, #000 var(--gutter), #000 calc(100% - var(--gutter)), transparent 100%);
+}
+@media (min-width: 768px) {
+  .sb-fade-x {
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+}

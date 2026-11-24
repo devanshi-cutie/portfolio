@@ -1,0 +1,158 @@
+/*
+ * Admin styles. Classes are prefixed `adm-` so nothing leaks into themes.
+ *
+ * Colours and fonts come from the ACTIVE THEME: src/app/admin/layout.tsx puts
+ * `theme.brand.cssVars` (--brand-*) and `theme.brand.fontClassName` on #adm-root.
+ * Below they are mapped to the admin's semantic tokens (--a-*), which every
+ * admin component uses through Tailwind's `bg-(--a-surface)` syntax. Nothing
+ * here names a creator's colour, so another theme re-skins the admin for free.
+ */
+
+.adm-root {
+  --a-bg: var(--brand-bg);
+  --a-surface: var(--brand-surface);
+  --a-muted: var(--brand-surface-2);
+  --a-muted-strong: color-mix(in oklab, var(--brand-surface-2) 82%, var(--brand-ink));
+  --a-line: var(--brand-line);
+  --a-line-strong: color-mix(in oklab, var(--brand-ink) 26%, var(--brand-surface));
+  --a-ink: var(--brand-ink);
+  --a-ink-soft: var(--brand-ink-soft);
+  /* decorative only (icons), never text */
+  --a-ink-faint: color-mix(in oklab, var(--brand-ink-soft) 62%, var(--brand-surface));
+  --a-primary: var(--brand-primary);
+  --a-primary-ink: var(--brand-primary-ink);
+  --a-primary-hover: color-mix(in oklab, var(--brand-primary) 86%, var(--brand-ink));
+  --a-primary-press: color-mix(in oklab, var(--brand-primary) 72%, var(--brand-ink));
+  --a-ring: var(--brand-primary);
+  --a-accent: var(--brand-accent);
+  /* fills / decoration only: too light for text */
+  --a-highlight: var(--brand-highlight);
+  --a-blush: var(--brand-blush);
+  --a-gold: var(--brand-gold);
+  --a-warn-bg: color-mix(in oklab, var(--brand-gold) 16%, var(--brand-surface));
+  --a-warn-line: color-mix(in oklab, var(--brand-gold) 55%, var(--brand-surface));
+  --a-overlay: color-mix(in oklab, var(--brand-ink) 42%, transparent);
+  --a-font-display: var(--brand-font-display);
+  --a-font-body: var(--brand-font-body);
+
+  /* sonner toasts */
+  --normal-bg: var(--a-surface);
+  --normal-text: var(--a-ink);
+  --normal-border: var(--a-line);
+  --success-bg: color-mix(in oklab, var(--brand-blush) 55%, var(--brand-surface));
+  --success-text: var(--a-ink);
+  --success-border: var(--a-highlight);
+  /* errors stay red on purpose: a semantic colour, not a brand one */
+  --a-danger: #b91c1c;
+  --error-bg: color-mix(in oklab, var(--a-danger) 8%, var(--brand-surface));
+  --error-text: color-mix(in oklab, var(--a-danger) 70%, var(--brand-ink));
+  --error-border: color-mix(in oklab, var(--a-danger) 30%, var(--brand-surface));
+
+  background: var(--a-bg);
+  color: var(--a-ink);
+  font-family: var(--a-font-body), ui-sans-serif, system-ui, sans-serif;
+}
+
+.adm-root ::selection { background: var(--a-blush); color: var(--a-ink); }
+
+.adm-display {
+  font-family: var(--a-font-display), Georgia, serif;
+  font-optical-sizing: auto;
+  letter-spacing: -0.01em;
+}
+
+/* Sonner renders inside #adm-root, so it inherits the tokens above. */
+.adm-root [data-sonner-toast] { font-family: var(--a-font-body), ui-sans-serif, system-ui, sans-serif; border-radius: 0.875rem; }
+
+/* ---------------------------------------------------------------- motion
+ * Enter: ease-out, ~150ms. Exit: ease-in, ~half as long. Reduced motion: fades only.
+ */
+
+@keyframes adm-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes adm-fade-out { from { opacity: 1; } to { opacity: 0; } }
+@keyframes adm-pop-in { from { opacity: 0; transform: scale(0.97); } to { opacity: 1; transform: scale(1); } }
+@keyframes adm-pop-out { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(0.97); } }
+@keyframes adm-rise-in { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@keyframes adm-rise-out { from { transform: translateY(0); } to { transform: translateY(100%); } }
+@keyframes adm-right-in { from { transform: translateX(100%); } to { transform: translateX(0); } }
+@keyframes adm-right-out { from { transform: translateX(0); } to { transform: translateX(100%); } }
+@keyframes adm-left-in { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+@keyframes adm-left-out { from { transform: translateX(0); } to { transform: translateX(-100%); } }
+
+.adm-overlay[data-state="open"] { animation: adm-fade-in 150ms cubic-bezier(0.16, 1, 0.3, 1); }
+.adm-overlay[data-state="closed"] { animation: adm-fade-out 100ms cubic-bezier(0.7, 0, 0.84, 0); }
+
+/* modal: bottom sheet on phones, centered dialog from sm */
+.adm-modal[data-state="open"] { animation: adm-rise-in 220ms cubic-bezier(0.16, 1, 0.3, 1); }
+.adm-modal[data-state="closed"] { animation: adm-rise-out 120ms cubic-bezier(0.7, 0, 0.84, 0); }
+@media (min-width: 640px) {
+  .adm-modal[data-state="open"] { animation: adm-pop-in 150ms cubic-bezier(0.16, 1, 0.3, 1); }
+  .adm-modal[data-state="closed"] { animation: adm-pop-out 100ms cubic-bezier(0.7, 0, 0.84, 0); }
+}
+
+.adm-sheet-right[data-state="open"] { animation: adm-right-in 240ms cubic-bezier(0.16, 1, 0.3, 1); }
+.adm-sheet-right[data-state="closed"] { animation: adm-right-out 140ms cubic-bezier(0.7, 0, 0.84, 0); }
+.adm-sheet-left[data-state="open"] { animation: adm-left-in 220ms cubic-bezier(0.16, 1, 0.3, 1); }
+.adm-sheet-left[data-state="closed"] { animation: adm-left-out 120ms cubic-bezier(0.7, 0, 0.84, 0); }
+
+.adm-tooltip[data-state="delayed-open"],
+.adm-tooltip[data-state="instant-open"] { animation: adm-fade-in 100ms ease-out; }
+
+.adm-dragging { box-shadow: 0 8px 24px -8px color-mix(in oklab, var(--a-ink) 35%, transparent); border-radius: 0.5rem; opacity: 0.95; }
+
+@media (prefers-reduced-motion: reduce) {
+  .adm-modal[data-state="open"],
+  .adm-sheet-right[data-state="open"],
+  .adm-sheet-left[data-state="open"] { animation: adm-fade-in 120ms linear; }
+  .adm-modal[data-state="closed"],
+  .adm-sheet-right[data-state="closed"],
+  .adm-sheet-left[data-state="closed"] { animation: adm-fade-out 80ms linear; }
+}
+
+/* The Cloudinary upload widget iframe must stay clickable while a Radix dialog is open
+   (Radix sets pointer-events: none on <body>). */
+body > iframe[src*="cloudinary.com"] { pointer-events: auto !important; }
+
+/* ---------------------------------------------------------------- login
+ * Decoration comes from optional theme tokens with neutral fallbacks:
+ * --brand-pattern (a background-image), --brand-shadow, --brand-radius-hero.
+ */
+.adm-login {
+  background:
+    radial-gradient(60rem 40rem at 50% -10%, color-mix(in oklab, var(--a-blush) 70%, transparent), transparent 70%),
+    var(--a-bg);
+}
+/* the theme's pattern, very faint and fading out from the centre */
+.adm-login-pattern {
+  opacity: 0.08;
+  background-image: var(--brand-pattern, none);
+  mask-image: radial-gradient(closest-side, #000 40%, transparent);
+}
+.adm-login-card {
+  border-radius: var(--brand-radius-hero, 28px);
+  box-shadow: var(--brand-shadow, 0 20px 40px -24px color-mix(in oklab, var(--a-ink) 35%, transparent));
+}
+
+/* portrait in the theme's hero shape (arch for the scrapbook theme) */
+.adm-login-portrait {
+  border-radius: var(--brand-radius-hero, 28px);
+  box-shadow: var(--brand-shadow, 0 20px 40px -24px color-mix(in oklab, var(--a-ink) 35%, transparent));
+}
+.adm-login-tag { box-shadow: 0 8px 20px -12px color-mix(in oklab, var(--a-ink) 40%, transparent); }
+/* one-time entrance: portrait first, then the welcome (≤300ms cascade) */
+@keyframes adm-login-rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+.adm-login-in { animation: adm-login-rise 420ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+.adm-login-in-2 { animation-delay: 90ms; }
+@media (prefers-reduced-motion: reduce) { .adm-login-in { animation: none; } }
+
+/* wrong password: 3 quick shakes, ~300ms */
+@keyframes adm-shake {
+  0%, 100% { transform: translateX(0); }
+  16% { transform: translateX(-6px); }
+  33% { transform: translateX(6px); }
+  50% { transform: translateX(-5px); }
+  66% { transform: translateX(4px); }
+  83% { transform: translateX(-2px); }
+}
+.adm-shake { animation: adm-shake 300ms cubic-bezier(0.65, 0, 0.35, 1); }
+@media (prefers-reduced-motion: reduce) { .adm-shake { animation: none; } }
