@@ -7,6 +7,8 @@ const eslintConfig = defineConfig([
   ...nextTs,
   // Override default ignores of eslint-config-next.
   globalIgnores([
+    // local launch-video project (git-ignored via .git/info/exclude)
+    "brag-output/**",
     // Default ignores of eslint-config-next:
     ".next/**",
     "out/**",
