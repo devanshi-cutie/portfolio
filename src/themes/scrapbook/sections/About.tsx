@@ -3,6 +3,7 @@ import { imageUrl } from "@/core/cloudinary/urls";
 import type { SectionConfig, SiteContent } from "@/core/types/content";
 import { Arrow } from "../components/Doodles";
 import { MobileClamp } from "../components/MobileClamp";
+import { Jharokha } from "../components/jaipur/Jharokha";
 import { SectionHeading, Tape } from "../components/SectionHeading";
 import { labelOf, portraitOf } from "../lib/media";
 import { Reveal } from "../motion/Reveal";
@@ -17,30 +18,29 @@ export function About({ content, section }: { content: SiteContent; section: Sec
     <section id="about" aria-labelledby="about-title" className="relative px-(--gutter) py-12 md:py-28">
       <div className="mx-auto grid max-w-[1320px] items-center gap-12 md:grid-cols-[0.85fr_1.15fr] md:gap-14 lg:gap-24">
         {portrait ? (
-          <Reveal className="relative mx-auto w-full max-w-[min(70vw,260px)] md:max-w-[420px]">
+          // no Reveal here: the jharokha runs its own entrance and shows finished without JS
+          <div className="relative w-[calc(100%_+_1rem)] max-w-[360px] max-md:mx-[max(-0.5rem,calc((100%_-_360px)/2))] md:mx-auto md:w-full md:max-w-[540px]">
             <figure className="relative rotate-[-2deg]">
-              {/* arch-topped portrait in a double rule, like a cut-out pasted onto the page */}
-              <div className="rounded-t-[999px] border-[1.5px] border-(--rose-deep) p-2.5">
-                <div className="aspect-[4/5] overflow-hidden rounded-t-[999px] bg-(--cream-2)">
-                  {/* eslint-disable-next-line @next/next/no-img-element -- Cloudinary crops to the face */}
-                  <img
-                    src={imageUrl(portrait, { width: 800, height: 1000, crop: "fill", gravity: "face" })}
-                    alt={labelOf(portrait)}
-                    width={800}
-                    height={1000}
-                    loading="lazy"
-                    decoding="async"
-                    className="size-full object-cover object-[50%_25%]"
-                  />
-                </div>
-              </div>
-              <Tape className="absolute -top-3 left-1/2 -translate-x-1/2 rotate-[4deg]">{identity.location}</Tape>
-              <figcaption className="sb-accent absolute -bottom-9 -right-1 rotate-[-6deg] text-[1.35rem] text-(--rose-deep) md:-bottom-10 md:-right-10 md:text-[1.6rem]">
+              {/* the portrait set in a Hawa Mahal jharokha (window) standing behind it */}
+              <Jharokha>
+                {/* eslint-disable-next-line @next/next/no-img-element -- Cloudinary crops to the face */}
+                <img
+                  src={imageUrl(portrait, { width: 800, height: 1000, crop: "fill", gravity: "face" })}
+                  alt={labelOf(portrait)}
+                  width={800}
+                  height={1000}
+                  loading="lazy"
+                  decoding="async"
+                  className="size-full object-cover object-[50%_25%]"
+                />
+              </Jharokha>
+              <Tape className="absolute -left-1 top-[9.5%] z-[1] -rotate-[8deg] md:-left-3">{identity.location}</Tape>
+              <figcaption className="sb-accent absolute -bottom-7 right-1 rotate-[-6deg] text-[1.35rem] text-(--rose-deep) md:-bottom-8 md:-right-6 md:text-[1.6rem]">
                 hi, it&apos;s me
               </figcaption>
-              <Arrow className="absolute -bottom-6 right-24 size-10 rotate-[200deg] text-(--rose-deep) md:right-16 md:size-12" />
+              <Arrow className="absolute -bottom-3 right-[29%] size-10 rotate-[200deg] text-(--rose-deep) md:size-12" />
             </figure>
-          </Reveal>
+          </div>
         ) : null}
 
         <div className="min-w-0">

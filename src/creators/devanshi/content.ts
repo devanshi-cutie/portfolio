@@ -41,9 +41,15 @@ export const settings: SiteSettings = {
     { tag: "ugc", label: "UGC content creation" },
     { tag: "instagram", label: "Instagram collabs" },
   ],
+  // instagram.* values were read from her public profile on 2026-11-24; the admin's
+  // Instagram page refreshes them. site.* values are counted from the published site.
   stats: [
-    { value: "40+", label: "Brands collaborated with" },
-    { value: "2.6K", label: "Instagram community" },
+    { value: "2.6K", label: "Instagram followers", source: "instagram.followers" },
+    { value: "230K+", label: "Views across my reels", source: "instagram.reelViews" },
+    { value: "160K", label: "Views on my top reel", source: "instagram.topReelViews" },
+    { value: "119", label: "Posts on Instagram", source: "instagram.posts" },
+    { value: "40+", label: "Brands collaborated with", source: "site.brands" },
+    { value: "26", label: "Reels on this site", source: "site.reels" },
     { value: "8+", label: "Industries covered" },
     { value: "3-in-1", label: "Scriptwriter, creator & editor" },
   ],

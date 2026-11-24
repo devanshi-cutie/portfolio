@@ -1,15 +1,16 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { Controller, useFieldArray, useWatch, type Control, type FieldErrors, type UseFormRegister } from "react-hook-form";
 import { Tabs } from "radix-ui";
 import { ChevronDown } from "lucide-react";
-import type { SectionKey, SiteSettings } from "@/core/types/content";
+import type { SectionKey, SiteSettings, StatSource } from "@/core/types/content";
 import { SECTION_KEYS } from "@/core/types/content";
 import { cn } from "../lib/cn";
 import { useSettingsForm } from "../lib/use-settings-form";
 import { Button, focusRing } from "../ui/button";
-import { Field, Input, Textarea, fieldA11y } from "../ui/field";
+import { Field, Input, Select, Textarea, fieldA11y } from "../ui/field";
 import { PageHeader } from "../ui/misc";
 import { SaveBar } from "../ui/save-bar";
 import { DragHandle, SortableContainer, SortableItem } from "../ui/sortable";
@@ -231,6 +232,34 @@ function SectionList({ control, register, errors }: ListProps) {
 
 /* ----------------------------------------------------------------- lists */
 
+/** Where a number's value comes from. instagram.* are stored and updated from the Instagram page; site.* are counted live. */
+const STAT_SOURCE_OPTIONS: { value: StatSource; label: string }[] = [
+  { value: "manual", label: "Typed by hand" },
+  { value: "instagram.followers", label: "Instagram followers" },
+  { value: "instagram.posts", label: "Instagram posts" },
+  { value: "instagram.reelViews", label: "Instagram reel views (all reels)" },
+  { value: "instagram.topReelViews", label: "Instagram top reel views" },
+  { value: "site.brands", label: "Brands on this site (auto)" },
+  { value: "site.reels", label: "Reels on this site (auto)" },
+];
+
+function StatSourceHint({ source }: { source: StatSource | undefined }) {
+  if (source?.startsWith("instagram.")) {
+    return (
+      <>
+        Updated from the{" "}
+        <Link href="/admin/instagram" className={cn("rounded font-medium text-(--a-ink) underline underline-offset-2", focusRing)}>
+          Instagram page
+        </Link>
+        .
+      </>
+    );
+  }
+  if (source === "site.brands") return <>Counted from your published brands. The value above shows if there are none.</>;
+  if (source === "site.reels") return <>Counted from your published reels. The value above shows if there are none.</>;
+  return null;
+}
+
 function StatsList({ control, register, errors }: ListProps) {
   const { fields, move, remove, append } = useFieldArray({ control, name: "stats" });
   return (
@@ -242,17 +271,37 @@ function StatsList({ control, register, errors }: ListProps) {
       itemName="number"
       getLabel={(i) => `number ${i + 1}`}
       emptyText="No numbers yet. Add things like “25+ brands”."
-      renderItem={(i) => (
-        <div className="grid gap-2 sm:grid-cols-[8rem_1fr]">
-          <Field id={`stat-${i}-value`} label="Value" error={errorAt(errors, ["stats", i, "value"])}>
-            <Input {...fieldA11y(`stat-${i}-value`, errorAt(errors, ["stats", i, "value"]))} placeholder="e.g. 25+" {...register(`stats.${i}.value`)} />
-          </Field>
-          <Field id={`stat-${i}-label`} label="Label" error={errorAt(errors, ["stats", i, "label"])}>
-            <Input {...fieldA11y(`stat-${i}-label`, errorAt(errors, ["stats", i, "label"]))} placeholder="Brands collaborated with" {...register(`stats.${i}.label`)} />
-          </Field>
-        </div>
-      )}
+      renderItem={(i) => <StatRow index={i} control={control} register={register} errors={errors} />}
     />
+  );
+}
+
+/** One number. Watches only its own source, so typing in one row doesn't re-render the others. */
+function StatRow({ index: i, control, register, errors }: ListProps & { index: number }) {
+  const source = useWatch({ control, name: `stats.${i}.source` });
+  const auto = source?.startsWith("site.") ?? false;
+  const hint = source && source !== "manual" ? <StatSourceHint source={source} /> : undefined;
+  return (
+    <div className="grid gap-2 sm:grid-cols-[8rem_1fr]">
+      <Field id={`stat-${i}-value`} label={auto ? "Fallback value" : "Value"} error={errorAt(errors, ["stats", i, "value"])}>
+        <Input {...fieldA11y(`stat-${i}-value`, errorAt(errors, ["stats", i, "value"]))} placeholder="e.g. 25+" {...register(`stats.${i}.value`)} />
+      </Field>
+      <Field id={`stat-${i}-label`} label="Label" error={errorAt(errors, ["stats", i, "label"])}>
+        <Input {...fieldA11y(`stat-${i}-label`, errorAt(errors, ["stats", i, "label"]))} placeholder="Brands collaborated with" {...register(`stats.${i}.label`)} />
+      </Field>
+      <Field id={`stat-${i}-source`} label="Source" hint={hint} error={errorAt(errors, ["stats", i, "source"])} className="sm:col-span-2">
+        <Select
+          {...fieldA11y(`stat-${i}-source`, errorAt(errors, ["stats", i, "source"]), Boolean(hint))}
+          {...register(`stats.${i}.source`)}
+        >
+          {STAT_SOURCE_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </Select>
+      </Field>
+    </div>
   );
 }
 

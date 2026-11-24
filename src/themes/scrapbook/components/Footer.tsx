@@ -3,15 +3,18 @@ import { SITE_CREDIT } from "@/core/lib/credit";
 import type { SiteContent } from "@/core/types/content";
 import { instagramUrl } from "../lib/media";
 import { Heart } from "./Doodles";
+import { Skyline } from "./jaipur/Skyline";
 
-/** Peak-end: a lace-edged rose page with a big italic "Thank you". */
+/** Peak-end: a rose page under the Pink City skyline, with a big italic "Thank you". */
 export function Footer({ content }: { content: SiteContent }) {
   const { identity } = content.settings;
   // social profiles only; website / portfolio links (e.g. the media kit) live in Contact and Services
   const socials = content.settings.socials.filter((s) => s.url && s.platform !== "website");
   const ig = instagramUrl(content);
   return (
-    <footer className="sb-on-dark sb-lace relative mt-10 bg-(--rose-deep) px-(--gutter) pb-[calc(2.5rem+env(safe-area-inset-bottom))] pt-20 text-(--cream) md:pt-24">
+    <footer className="sb-on-dark sb-skyline-host relative mt-(--sky-h) bg-(--rose-deep) px-(--gutter) pb-[calc(2.5rem+env(safe-area-inset-bottom))] pt-20 text-(--cream) md:pt-24">
+      {/* the cream page meets the footer along the skyline, which fills the top margin (--sky-h) */}
+      <Skyline />
       <div className="mx-auto max-w-[1320px]">
         <div className="relative flex flex-col items-center text-center">
           <Heart className="absolute -top-4 right-[18%] hidden size-10 -rotate-12 text-(--blush) md:block" />

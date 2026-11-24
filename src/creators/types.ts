@@ -83,4 +83,6 @@ export interface MediaSeed {
   brand?: string; // brand slug
   featured?: boolean;
   posterOffset?: number;
+  /** link to the original post, e.g. https://www.instagram.com/reel/… */
+  sourceUrl?: string;
 }

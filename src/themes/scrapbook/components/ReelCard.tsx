@@ -12,7 +12,7 @@ import { useEffect, useRef, useState, type PointerEvent } from "react";
 import type { MediaItem } from "@/core/types/content";
 import { cn } from "../lib/cn";
 import type { MediaMeta } from "../lib/media";
-import { isVideo } from "../lib/media";
+import { isVideo, sourceLinkOf } from "../lib/media";
 import { prefersSaveData, useFinePointer } from "../motion/hooks";
 import { PhoneFrame } from "./PhoneFrame";
 import { PreviewMedia } from "./PreviewMedia";
@@ -67,6 +67,8 @@ export function ReelCard({
   };
 
   const play = autoplay && (fine ? hover : centred);
+  // Purely visual hint that the lightbox links to the original reel.
+  const onInstagram = sourceLinkOf(media)?.instagram ?? false;
   const sub = [meta.brand, meta.collection].filter(Boolean).join(" · ");
 
   return (
@@ -89,6 +91,14 @@ export function ReelCard({
           className="transition-[translate,box-shadow] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/card:-translate-y-1"
         >
           <PreviewMedia media={media} width={540} play={play} eager={eager} sizes="(min-width: 1280px) 22vw, (min-width: 768px) 30vw, 46vw" />
+          {onInstagram ? (
+            <span
+              aria-hidden
+              className="absolute right-3.5 top-3.5 z-[2] grid size-6 place-items-center rounded-full bg-(--cream)/90 text-(--rose-deep) shadow-sm"
+            >
+              <InstagramGlyph className="size-3.5" />
+            </span>
+          ) : null}
           {fine ? null : (
             <span
               aria-hidden
@@ -117,5 +127,16 @@ export function ReelCard({
         {sub ? <p className="mt-0.5 truncate text-[0.8125rem] text-(--ink-soft)">{sub}</p> : null}
       </div>
     </div>
+  );
+}
+
+/** Small Instagram camera glyph (rounded square, lens, flash dot). Decorative. */
+function InstagramGlyph({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" className={className}>
+      <rect x="3" y="3" width="18" height="18" rx="5" />
+      <circle cx="12" cy="12" r="4" />
+      <circle cx="17.3" cy="6.7" r="1.3" fill="currentColor" stroke="none" />
+    </svg>
   );
 }

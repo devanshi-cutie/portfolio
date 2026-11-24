@@ -201,6 +201,9 @@ export function buildPlan(creator: CreatorPackage, options: PlanOptions): PlanRe
     if (seed.brand && !brandSet.has(seed.brand)) {
       errors.push(`${label} "${source}": unknown brand slug "${seed.brand}"`);
     }
+    if (seed.sourceUrl !== undefined && !/^https:\/\/\S+$/.test(seed.sourceUrl)) {
+      errors.push(`${label} "${source}": sourceUrl must be an https:// link`);
+    }
 
     const resourceType = resourceTypeOf(source);
     if (!resourceType) {

@@ -34,6 +34,8 @@ export function SiteShell({ content, children }: { content: SiteContent; childre
     >
       {/* overscroll/canvas colour behind the shell, from the same palette */}
       <style>{`html:has([data-theme="scrapbook"]){background:${palette.cream}}`}</style>
+      {/* Pink City sky: fixed backdrop under all content (z-index -1 in the isolated shell) */}
+      <div aria-hidden className="sb-sky" />
       <a
         href="#main"
         className="sr-only z-[90] rounded-full bg-(--ink) px-5 py-3 font-semibold text-(--cream) focus:not-sr-only focus:fixed focus:left-4 focus:top-4"

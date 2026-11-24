@@ -25,6 +25,30 @@ export function labelOf(m: MediaItem): string {
   return m.alt || m.title || m.caption || (isVideo(m) ? "Video by the creator" : "Photo by the creator");
 }
 
+export interface SourceLink {
+  href: string;
+  /** true when the link points at instagram.com */
+  instagram: boolean;
+  /** "Watch on Instagram" (video), "View on Instagram" (photo) or "View original post" */
+  label: string;
+}
+
+/** The item's link to its original post, or null when unset or not http(s). */
+export function sourceLinkOf(m: MediaItem): SourceLink | null {
+  if (!m.sourceUrl) return null;
+  let url: URL;
+  try {
+    url = new URL(m.sourceUrl);
+  } catch {
+    return null;
+  }
+  if (url.protocol !== "https:" && url.protocol !== "http:") return null;
+  const host = url.hostname.toLowerCase();
+  const instagram = host === "instagram.com" || host.endsWith(".instagram.com") || host === "instagr.am";
+  const label = !instagram ? "View original post" : isVideo(m) ? "Watch on Instagram" : "View on Instagram";
+  return { href: url.href, instagram, label };
+}
+
 export interface MediaMeta {
   id: string;
   title: string;

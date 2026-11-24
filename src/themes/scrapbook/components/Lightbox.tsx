@@ -11,12 +11,21 @@
 import { ArrowUpRight, ChevronLeft, ChevronRight, Film, X } from "lucide-react";
 import { AnimatePresence, motion, useDragControls, useIsPresent, useReducedMotion, type PanInfo } from "motion/react";
 import Link from "next/link";
-import { useCallback, useEffect, useId, useRef, useState, useSyncExternalStore, type PointerEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type CSSProperties,
+  type PointerEvent,
+} from "react";
 import { createPortal } from "react-dom";
 import { editedDimensions } from "@/core/cloudinary/urls";
 import type { MediaItem } from "@/core/types/content";
 import type { MediaMeta } from "../lib/media";
-import { isVideo, labelOf, posterOf, videoSrcOf } from "../lib/media";
+import { isVideo, labelOf, posterOf, sourceLinkOf, videoSrcOf } from "../lib/media";
 import { EASE_IN, EASE_MOVE, EASE_OUT } from "../motion/easing";
 import { useFinePointer } from "../motion/hooks";
 import { pauseAll } from "../motion/playback";
@@ -25,6 +34,32 @@ import { pauseAll } from "../motion/playback";
 function aspectStyle(item: MediaItem) {
   const dims = editedDimensions(item);
   return dims ? { aspectRatio: `${dims.width} / ${dims.height}` } : undefined;
+}
+
+/*
+ * Desktop (md+) sizing. The media and the caption sit side by side as one
+ * centred group, so the media box needs a definite width of its own (a
+ * full-width box would push the caption to the far edge, under the Next
+ * button). Its width is the smaller of:
+ *   - the room left beside the caption: 100% of the row's content box (the
+ *     px-24 padding already clears the nav buttons) minus caption + gap;
+ *   - the media height × aspect ratio, where the height is the old cap
+ *     (86dvh) or the row's content height (100dvh − py-10), whichever is less.
+ * Its height then follows from aspect-ratio, so the shape is never distorted.
+ * Keep these in step with md:w-72 (caption), md:gap-10 and md:py-10 below.
+ */
+const CAPTION_W = "18rem";
+const GROUP_GAP = "2.5rem";
+const MEDIA_MAX_H = "min(86dvh, 100dvh - 5rem)";
+
+function desktopBoxStyle(item: MediaItem): CSSProperties {
+  const dims = editedDimensions(item);
+  const ratio = dims && dims.width > 0 && dims.height > 0 ? dims.width / dims.height : 9 / 16;
+  const r = Number(ratio.toFixed(5));
+  return {
+    "--lb-ar": String(r),
+    "--lb-w": `min(100% - ${CAPTION_W} - ${GROUP_GAP}, ${r} * ${MEDIA_MAX_H})`,
+  } as CSSProperties;
 }
 
 const noop = () => () => {};
@@ -148,6 +183,7 @@ function Panel({ items, metas, index, onIndex, onClose, instagram, noun = "Item"
   };
 
   if (!item) return null;
+  const source = sourceLinkOf(item);
   const transformOrigin = origin ? `${origin.x}px ${origin.y}px` : "50% 50%";
 
   return (
@@ -170,7 +206,8 @@ function Panel({ items, metas, index, onIndex, onClose, instagram, noun = "Item"
         }}
       >
         <motion.div
-          className="relative flex max-h-full min-h-0 w-full max-w-[min(100%,calc(78dvh*9/16))] flex-1 items-center justify-center md:h-full md:max-h-[86dvh] md:max-w-none md:flex-none"
+          className="relative flex max-h-full min-h-0 w-full max-w-[min(100%,calc(78dvh*9/16))] flex-1 items-center justify-center md:aspect-(--lb-ar) md:h-auto md:max-h-none md:w-(--lb-w) md:max-w-none md:flex-none"
+          style={desktopBoxStyle(item)}
           drag={fine ? false : "x"}
           dragControls={dragControls}
           dragListener={false}
@@ -189,7 +226,7 @@ function Panel({ items, metas, index, onIndex, onClose, instagram, noun = "Item"
             <motion.div
               key={item.id}
               custom={dir}
-              className="relative aspect-[9/16] h-full max-h-[78dvh] max-w-full overflow-hidden rounded-[1.4rem] bg-[#1f0c12] shadow-[0_30px_80px_-20px_rgb(0_0_0/0.7)] md:max-h-[86dvh]"
+              className="relative aspect-[9/16] h-full max-h-[78dvh] max-w-full overflow-hidden rounded-[1.4rem] bg-[#1f0c12] shadow-[0_30px_80px_-20px_rgb(0_0_0/0.7)] md:h-auto md:max-h-none md:w-full"
               style={aspectStyle(item)}
               initial={reduce ? { opacity: 0 } : { opacity: 0, x: dir * 60 }}
               animate={{ opacity: 1, x: 0, transition: { duration: 0.26, ease: EASE_MOVE } }}
@@ -200,25 +237,48 @@ function Panel({ items, metas, index, onIndex, onClose, instagram, noun = "Item"
           </AnimatePresence>
         </motion.div>
 
-        <div className="w-full max-w-md shrink-0 text-(--cream) md:w-72" aria-live="polite">
-          <p className="text-xs font-semibold tracking-wide text-(--blush)">
-            {noun} {index + 1} of {count}
-          </p>
-          <h2 id={titleId} className="sb-serif mt-1 text-xl leading-tight md:text-2xl">
-            {meta?.title ?? labelOf(item)}
-          </h2>
+        <div className="w-full max-w-md shrink-0 text-(--cream) md:w-72">
+          {/* Only the counter and title are announced per slide, not the links. */}
+          <div aria-live="polite">
+            <p className="text-xs font-semibold tracking-wide text-(--blush)">
+              {noun} {index + 1} of {count}
+            </p>
+            <h2 id={titleId} className="sb-serif mt-1 text-xl leading-tight md:text-2xl">
+              {meta?.title ?? labelOf(item)}
+            </h2>
+          </div>
           {meta?.brand || meta?.collection ? (
             <p className="mt-1 text-sm text-(--cream)/75">{[meta.brand, meta.collection].filter(Boolean).join(" · ")}</p>
           ) : null}
-          {meta?.collectionSlug ? (
-            <Link
-              href={`/work/${meta.collectionSlug}`}
-              onClick={onClose}
-              className="mt-3 inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold underline decoration-(--blush) underline-offset-4 hover:text-(--blush)"
-            >
-              More {meta.collection ? meta.collection.toLowerCase() : "from this collection"}
-              <ArrowUpRight className="size-4" aria-hidden />
-            </Link>
+          {source || meta?.collectionSlug ? (
+            <div className="mt-3 flex flex-col items-start gap-1">
+              {source ? (
+                <a
+                  href={source.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group/src flex min-h-11 flex-col justify-center py-1"
+                >
+                  <span className="inline-flex items-center gap-1.5 text-sm font-semibold underline decoration-(--blush) underline-offset-4 group-hover/src:text-(--blush)">
+                    {source.label}
+                    <ArrowUpRight className="size-4" aria-hidden />
+                  </span>
+                  <span className="mt-0.5 text-xs text-(--cream)/70">
+                    see the views &amp; comments<span className="sr-only"> (opens in a new tab)</span>
+                  </span>
+                </a>
+              ) : null}
+              {meta?.collectionSlug ? (
+                <Link
+                  href={`/work/${meta.collectionSlug}`}
+                  onClick={onClose}
+                  className="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold underline decoration-(--blush) underline-offset-4 hover:text-(--blush)"
+                >
+                  More {meta.collection ? meta.collection.toLowerCase() : "from this collection"}
+                  <ArrowUpRight className="size-4" aria-hidden />
+                </Link>
+              ) : null}
+            </div>
           ) : null}
         </div>
       </motion.div>
@@ -267,12 +327,18 @@ function Stage({ item, instagram, autoPlay }: { item: MediaItem; instagram: stri
     );
   }
   if (broken) {
+    const source = sourceLinkOf(item);
     return (
       <div className="flex size-full flex-col items-center justify-center gap-3 p-6 text-center text-(--cream)">
         <Film className="size-8" strokeWidth={1.5} aria-hidden />
         <p className="text-sm">This clip can&apos;t play in this browser.</p>
-        <a href={instagram} target="_blank" rel="noopener noreferrer" className="text-sm font-semibold underline underline-offset-4">
-          Watch on Instagram
+        <a
+          href={source?.href ?? instagram}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex min-h-11 items-center text-sm font-semibold underline underline-offset-4"
+        >
+          {source?.label ?? "Watch on Instagram"}
         </a>
       </div>
     );

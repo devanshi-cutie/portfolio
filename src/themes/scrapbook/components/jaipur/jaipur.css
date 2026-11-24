@@ -1,0 +1,138 @@
+/*
+ * Jaipur set pieces: the About jharokha frame, the footer skyline and the
+ * Contact Patrika Gate.
+ *
+ * Each root gets `data-armed` once it has hydrated (useArmed) and `data-in`
+ * once it scrolls into view (motion's useInView). Pieces are hidden only while
+ * armed and not yet in view, so server HTML, no-JS, a hydration error, reduced
+ * motion and print all show everything finished and in place.
+ *
+ * Only transform, opacity and stroke-dashoffset animate.
+ */
+
+/* ------------------------------------------------------------ shared */
+
+.sb-jh-svg,
+.sb-gate-svg {
+  pointer-events: none;
+  overflow: visible;
+}
+
+/* the skyline is cropped to its box (slice) so nothing spills past the page edges */
+.sb-skyline-svg {
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/* hand-drawn rules: every stroked element carries pathLength="1" */
+.sb-ln {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+}
+
+/* ------------------------------------------------ About: jharokha frame */
+
+.sb-jh {
+  /* line weights in viewBox units (the window is 144 units wide) */
+  --jh-sw: 0.62;
+  --jh-sw-thin: 0.38;
+}
+@media (min-width: 768px) {
+  .sb-jh {
+    --jh-sw: 0.44;
+    --jh-sw-thin: 0.28;
+  }
+}
+.sb-jh .sb-jh-w {
+  stroke-width: var(--jh-sw);
+}
+.sb-jh .sb-jh-t {
+  stroke-width: var(--jh-sw-thin);
+}
+
+@media screen and (prefers-reduced-motion: no-preference) {
+  .sb-jh .sb-ln {
+    transition: stroke-dashoffset 480ms var(--ease-out) var(--d, 0ms);
+  }
+  .sb-jh .sb-jh-fill {
+    transition: opacity 520ms var(--ease-out) 260ms;
+  }
+  .sb-jh .sb-jh-photo {
+    transition:
+      opacity 500ms var(--ease-out) 120ms,
+      transform 560ms var(--ease-out) 120ms;
+  }
+  .sb-jh[data-armed]:not([data-in]) .sb-ln {
+    stroke-dashoffset: 1;
+  }
+  .sb-jh[data-armed]:not([data-in]) .sb-jh-fill {
+    opacity: 0;
+  }
+  .sb-jh[data-armed]:not([data-in]) .sb-jh-photo {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+
+/* ------------------------------------------------- Footer: Pink City skyline */
+
+/* the skyline's host (the footer): the skyline height, also used for its top margin */
+.sb-skyline-host {
+  --sky-h: clamp(70px, 10vw, 150px);
+}
+
+/* lit windows (Hawa Mahal, gate, Jal Mahal) warm up once the footer arrives */
+@media screen and (prefers-reduced-motion: no-preference) {
+  .sb-skyline .sb-lit {
+    transition: opacity 600ms var(--ease-out) var(--d, 0ms);
+  }
+  .sb-skyline[data-armed]:not([data-in]) .sb-lit {
+    opacity: 0;
+  }
+}
+
+/* ----------------------------------------------------- Contact: Patrika Gate */
+
+.sb-gate {
+  /* outline weight in viewBox units (300 wide): ~1.5px at either size */
+  --g-sw: 1.9;
+}
+@media (min-width: 768px) {
+  .sb-gate {
+    --g-sw: 1.15;
+  }
+}
+.sb-gate .sb-gate-a {
+  transform-box: view-box;
+  /* the corridor's vanishing point (see VP in PatrikaGate.tsx) */
+  transform-origin: 50% 52%;
+}
+
+@media screen and (prefers-reduced-motion: no-preference) {
+  .sb-gate .sb-gate-a {
+    transition:
+      opacity 280ms ease-out var(--d, 0ms),
+      transform 420ms var(--ease-out) var(--d, 0ms);
+  }
+  .sb-gate[data-armed]:not([data-in]) .sb-gate-a {
+    opacity: 0;
+    transform: scale(0.55);
+  }
+}
+
+/* ----------------------------------------------------------------- print */
+
+@media print {
+  .sb-jh .sb-ln {
+    stroke-dashoffset: 0;
+    transition: none;
+  }
+  .sb-jh .sb-jh-fill,
+  .sb-jh .sb-jh-photo,
+  .sb-gate .sb-gate-a,
+  .sb-skyline .sb-lit {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}

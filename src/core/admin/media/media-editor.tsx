@@ -82,6 +82,7 @@ interface FormValues {
   featured: boolean;
   published: boolean;
   posterOffset: number;
+  sourceUrl: string;
 }
 
 function toFormValues(media: MediaItem): FormValues {
@@ -95,10 +96,12 @@ function toFormValues(media: MediaItem): FormValues {
     featured: media.featured,
     published: media.published,
     posterOffset: media.posterOffset ?? 0,
+    sourceUrl: media.sourceUrl ?? "",
   };
 }
 
-function toPatch(values: FormValues): MediaPatch {
+function toPatch(values: FormValues, media: MediaItem): MediaPatch {
+  const sourceUrl = emptyToNull(values.sourceUrl);
   return {
     title: emptyToNull(values.title),
     caption: emptyToNull(values.caption),
@@ -109,6 +112,9 @@ function toPatch(values: FormValues): MediaPatch {
     featured: values.featured,
     published: values.published,
     posterOffset: Math.round(values.posterOffset * 10) / 10,
+    // Only sent when changed, so saving other fields never touches the column
+    // (keeps saves working on a database that doesn't have it yet).
+    ...(sourceUrl !== (media.sourceUrl ?? null) ? { sourceUrl } : {}),
   };
 }
 
@@ -156,7 +162,7 @@ function EditorBody({
   const poster = video ? videoPosterUrl(media, { width: 720, offset: media.posterOffset }) : null;
 
   const onSubmit = handleSubmit(async (values) => {
-    const patch = validateWith(mediaPatchSchema, toPatch(values), setError);
+    const patch = validateWith(mediaPatchSchema, toPatch(values, media), setError);
     if (!patch) return;
     const result = await callAction(() => updateMedia(media.id, patch as MediaPatch), { success: "Saved" });
     if (result.ok) {
@@ -179,7 +185,7 @@ function EditorBody({
   }
 
   return (
-    <form onSubmit={onSubmit} className="flex flex-col gap-5" aria-label="Edit media details">
+    <form onSubmit={onSubmit} className="flex flex-col gap-5" aria-label="Edit media details" noValidate>
       <div className="flex flex-wrap items-center gap-2">
         <Button variant="secondary" size="sm" onClick={onEditVisual}>
           <Crop aria-hidden /> Edit {video ? "video" : "photo"}
@@ -281,6 +287,22 @@ function EditorBody({
           error={errors.alt?.message}
         >
           <Input {...fieldA11y("m-alt", errors.alt?.message, true)} {...register("alt")} />
+        </Field>
+        <Field
+          id="m-source-url"
+          label="Link to original post"
+          hint="Visitors can open it to see the real views and likes."
+          error={errors.sourceUrl?.message}
+        >
+          <Input
+            {...fieldA11y("m-source-url", errors.sourceUrl?.message, true)}
+            {...register("sourceUrl")}
+            type="url"
+            inputMode="url"
+            autoComplete="off"
+            spellCheck={false}
+            placeholder="https://www.instagram.com/reel/…"
+          />
         </Field>
         <div className="grid gap-4 sm:grid-cols-3">
           <Field id="m-kind" label="Type" error={errors.kind?.message}>

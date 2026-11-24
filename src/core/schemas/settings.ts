@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { SECTION_KEYS } from "@/core/types/content";
+import { SECTION_KEYS, STAT_SOURCES } from "@/core/types/content";
 import type {
   BrandGroup,
   Highlight,
@@ -10,6 +10,7 @@ import type {
   SiteSettings,
   SocialLink,
   Stat,
+  StatSource,
 } from "@/core/types/content";
 import { idSchema, linkSchema } from "./common";
 
@@ -29,7 +30,13 @@ const brandGroupSchema = z.object({
   label: text(120),
 });
 
-const statSchema = z.object({ value: text(40), label: text(120) });
+/** One entry of `settings.stats`; also used alone by the Instagram apply action. */
+export const statSchema = z.object({
+  value: text(40),
+  label: text(120),
+  /** where the value comes from; absent or "manual" = typed by hand (normalizeSettings drops "manual") */
+  source: z.enum(STAT_SOURCES as unknown as [StatSource, ...StatSource[]]).optional(),
+});
 const highlightSchema = z.object({ title: text(120), body: text(1000) });
 const serviceSchema = z.object({
   title: text(120),
@@ -143,6 +150,16 @@ const strList = (v: unknown, fallback: string[]): string[] =>
 const objList = <T>(v: unknown, fallback: T[], item: (o: Obj) => T): T[] =>
   Array.isArray(v) ? v.filter(isObj).map(item) : fallback;
 
+const isStatSource = (v: unknown): v is StatSource =>
+  typeof v === "string" && (STAT_SOURCES as readonly string[]).includes(v);
+
+/** Keeps a known, non-manual `source`; "manual", unknown or missing sources are dropped. */
+function normalizeStat(o: Obj): Stat {
+  const stat: Stat = { value: str(o.value, ""), label: str(o.label, "") };
+  if (isStatSource(o.source) && o.source !== "manual") stat.source = o.source;
+  return stat;
+}
+
 const isSectionKey = (v: unknown): v is SectionKey =>
   typeof v === "string" && (SECTION_KEYS as readonly string[]).includes(v);
 
@@ -229,7 +246,7 @@ export function normalizeSettings(raw: unknown): SiteSettings {
       url: str(o.url, ""),
     })),
     brandGroups: normalizeBrandGroups(r.brandGroups, d.brandGroups),
-    stats: objList<Stat>(r.stats, d.stats, (o) => ({ value: str(o.value, ""), label: str(o.label, "") })),
+    stats: objList<Stat>(r.stats, d.stats, normalizeStat),
     highlights: objList<Highlight>(r.highlights, d.highlights, (o) => ({
       title: str(o.title, ""),
       body: str(o.body, ""),

@@ -4,6 +4,8 @@ import type { SectionConfig, SiteContent } from "@/core/types/content";
 import { ButtonLink } from "../components/Button";
 import { Swash } from "../components/Doodles";
 import { HeroStack } from "../components/HeroStack";
+import { Kites } from "../components/jaipur/Kites";
+import { cuspedArchPath, useSvgId } from "../components/jaipur/shapes";
 import { heroReels, indexContent, instagramUrl, metaOf } from "../lib/media";
 import { Magnet } from "../motion/Magnet";
 import { RotatingText } from "../motion/RotatingText";
@@ -11,7 +13,19 @@ import { RotatingText } from "../motion/RotatingText";
 /** CSS entrance delay; hero entrances are CSS so text shows before hydration. */
 const d = (ms: number) => ({ "--d": `${ms}ms` }) as CSSProperties;
 
+/**
+ * The jharokha window behind the reels: the ARCH_TALL family (11 lobes) built
+ * for the box it really gets. The window is 108% of the fan's width and runs
+ * from just above the fan to just below it, about 0.89 wide-per-tall at every
+ * breakpoint, so the lobes stay round. A gentler point (0.06) keeps the
+ * shoulders high enough to clear the back phones: the crown peeks above the
+ * front phone, the upper lobes show in the fan's top pockets, and the lower
+ * lobes and jambs show beside the back phones.
+ */
+const WINDOW_ARCH = cuspedArchPath({ aspect: 0.89, lobes: 11, pointed: 0.06 });
+
 export function Hero({ content, section }: { content: SiteContent; section: SectionConfig }) {
+  const archId = useSvgId("sb-hero-arch");
   const { identity, contact } = content.settings;
   const reels = heroReels(content);
   const idx = indexContent(content);
@@ -122,12 +136,48 @@ export function Hero({ content, section }: { content: SiteContent; section: Sect
         </div>
 
         <div className="relative">
-          {/* Jaipur nod: an arched window with a faint jaali lattice behind the reels */}
+          {/* Jaipur nod: a Hawa Mahal jharokha (cusped arch window) with a faint
+              jaali inside and a double moulding, behind the reels. Positioned on
+              a box matching the HeroStack fan (same width and 10:11 aspect) so
+              its percentages are fan-relative: 4% wider than the fan each side,
+              crown 4.5% (mobile, clear of the text above) / 6% (md+, clear of the
+              fixed nav) above the fan's top. Kites fly in the corners of the
+              same box, outside the arch. */}
           <div
             aria-hidden
-            className="absolute inset-x-[10%] bottom-[8%] top-[6%] mx-auto max-w-[460px] overflow-hidden rounded-t-[999px] border border-(--rose)/50 bg-(--cream-2) md:inset-x-[6%] md:bottom-[-4%]"
+            className="pointer-events-none absolute inset-x-0 top-0 mx-auto aspect-[10/11] w-full max-w-[min(100%,330px)] md:max-w-[520px]"
           >
-            <div className="sb-jaali absolute inset-0 opacity-[0.14]" />
+            <div className="absolute inset-x-[-4%] bottom-[-6%] top-[-4.5%] md:bottom-[-4%] md:top-[-6%]">
+              <div className="absolute inset-0 bg-(--cream-2)" style={{ clipPath: `url(#${archId})` }}>
+                <div className="sb-jaali absolute inset-0 opacity-[0.14]" />
+              </div>
+              <svg
+                viewBox="0 0 1 1"
+                preserveAspectRatio="none"
+                className="absolute inset-0 size-full overflow-visible text-(--rose)"
+                fill="none"
+                stroke="currentColor"
+              >
+                <defs>
+                  <clipPath id={archId} clipPathUnits="objectBoundingBox">
+                    <path d={WINDOW_ARCH} />
+                  </clipPath>
+                </defs>
+                <path d={WINDOW_ARCH} strokeOpacity={0.55} strokeWidth={1.25} vectorEffect="non-scaling-stroke" />
+              </svg>
+              {/* inner moulding, inset ~9px */}
+              <svg
+                viewBox="0 0 1 1"
+                preserveAspectRatio="none"
+                className="absolute inset-[9px] size-[calc(100%-18px)] overflow-visible text-(--rose)"
+                fill="none"
+                stroke="currentColor"
+              >
+                <path d={WINDOW_ARCH} strokeOpacity={0.4} strokeWidth={1} vectorEffect="non-scaling-stroke" />
+              </svg>
+            </div>
+            {/* kites in the sky in the fan's top corners, outside the arch */}
+            <Kites className="absolute inset-0" />
           </div>
           <HeroStack reels={reels} metas={metas} handle={identity.handle} badge={badge} instagram={ig} />
         </div>

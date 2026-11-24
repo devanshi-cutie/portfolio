@@ -122,6 +122,9 @@ export async function writeDatabase(db: SupabaseClient, input: SeedDbInput): Pro
       featured: m.seed.featured ?? false,
       sort_order: m.index,
       poster_offset: m.seed.posterOffset ?? 0,
+      // source_url is deliberately absent: upsert() sends the union of all rows'
+      // keys (missing ones as NULL), which would wipe links added in the admin.
+      // Seed links are written one row at a time below.
     };
   });
   let mediaWritten: unknown[] = [];
@@ -138,6 +141,24 @@ export async function writeDatabase(db: SupabaseClient, input: SeedDbInput): Pro
     await db.from("media").select("id, source_path").not("source_path", "is", null),
   ) as { id: string; source_path: string }[];
   const mediaIds = new Map(mediaIdRows.map((r) => [r.source_path, r.id]));
+
+  /* ------------------------------------------ links to original posts */
+  // Per row, so rows without a seed link are never touched. Like covers/logos:
+  // without force only empty links are filled, so admin edits survive.
+  for (const m of ready) {
+    if (!m.seed.sourceUrl) continue;
+    let query = db.from("media").update({ source_url: m.seed.sourceUrl }).eq("source_path", m.source);
+    if (!force) query = query.is("source_url", null);
+    const { error } = await query;
+    if (!error) continue;
+    if ((error.code === "PGRST204" || error.code === "42703") && error.message.includes("source_url")) {
+      warnings.push(
+        "media.source_url does not exist yet (migration 20261125000000 not applied) — seed links to original posts skipped",
+      );
+      break;
+    }
+    throw new DbError(describeDbError(`set link to original post for "${m.source}"`, error));
+  }
 
   const mediaIdFor = (source: string | undefined, where: string): string | null => {
     if (!source) return null;

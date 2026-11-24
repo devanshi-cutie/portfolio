@@ -19,6 +19,9 @@
   --nav-h: 4.25rem;
 
   position: relative;
+  /* own stacking context so the fixed .sb-sky (z-index -1) paints above this
+     cream background but below every section, the nav, portal and grain */
+  isolation: isolate;
   min-height: 100dvh;
   background: var(--cream);
   color: var(--ink);
@@ -98,6 +101,98 @@ html:has([data-theme="scrapbook"]) {
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .17 0 0 0 0 .07 0 0 0 0 .1 0 0 0 .9 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
 }
 
+/* Pink City sky: a fixed, non-interactive backdrop (SiteShell renders it).
+   z-index -1 inside the shell's isolated stacking context puts it above the
+   shell's cream but under every section, the nav, the portal and the grain;
+   sections with their own background simply cover it.
+   - base: a blush sun-glow from the top with a faint rose haze to the right
+   - ::before: the jaali lattice, living in the side gutters only
+   - ::after: a warm golden-hour glow that fades in as the page scrolls
+     (dawn → dusk). Without scroll timelines, or with reduced motion, the
+     page stays at dawn.
+   Contrast budget: rose-deep (#9C4A5C) small text must stay ≥4.5:1 on every
+   point of the viewport below the nav, at dawn and at full dusk. The glow
+   strengths and centres below are tuned to that (worst ≈4.6:1, top of a
+   360px phone just under the nav); don't raise them without re-checking. */
+.sb-sky {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  contain: strict;
+  background:
+    radial-gradient(44rem 26rem at 88% -8%, color-mix(in oklab, var(--rose) 8%, transparent), transparent 70%),
+    radial-gradient(64rem 40rem at 50% -20%, color-mix(in oklab, var(--blush) 70%, transparent), transparent 70%);
+}
+.sb-sky::before,
+.sb-sky::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+.sb-sky::before {
+  /* how far the lattice reaches in from each edge before it is gone */
+  --edge: 3.25rem;
+  opacity: 0.05;
+  background-image: var(--brand-pattern);
+  background-size: 48px 48px;
+  background-position: 50% 0;
+  -webkit-mask-image: linear-gradient(
+    90deg,
+    #000,
+    rgb(0 0 0 / 0.35) calc(var(--edge) * 0.5),
+    transparent var(--edge),
+    transparent calc(100% - var(--edge)),
+    rgb(0 0 0 / 0.35) calc(100% - var(--edge) * 0.5),
+    #000
+  );
+  mask-image: linear-gradient(
+    90deg,
+    #000,
+    rgb(0 0 0 / 0.35) calc(var(--edge) * 0.5),
+    transparent var(--edge),
+    transparent calc(100% - var(--edge)),
+    rgb(0 0 0 / 0.35) calc(100% - var(--edge) * 0.5),
+    #000
+  );
+}
+@media (min-width: 768px) {
+  .sb-sky::before {
+    --edge: clamp(7rem, 18vw, 19rem);
+    opacity: 0.06;
+  }
+}
+.sb-sky::after {
+  opacity: 0;
+  /* one low golden-hour glow rising from below the fold (centre under the
+     viewport, so the bottom edge gets ~11% of it, never the 18% peak) */
+  background: radial-gradient(
+    90rem 34rem at 50% 125%,
+    color-mix(in oklab, color-mix(in oklab, var(--gold) 65%, var(--terracotta)) 18%, transparent),
+    transparent 72%
+  );
+}
+@keyframes sb-dusk {
+  0%,
+  15% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+@supports (animation-timeline: scroll()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .sb-sky::after {
+      animation-name: sb-dusk;
+      animation-duration: auto;
+      animation-timing-function: linear;
+      animation-fill-mode: both;
+      animation-timeline: scroll(root block);
+    }
+  }
+}
+
 /* Perforated postage-stamp edge. The element's padding must equal --r; put
    real padding on an inner element. Adapted from Temani Afif's CSS shapes. */
 .sb-stamp {
@@ -145,21 +240,6 @@ html:has([data-theme="scrapbook"]) {
     conic-gradient(from -135deg at right, #0000, #000 1deg 89deg, #0000 90deg) right / 51% 7px repeat-y;
   mask: conic-gradient(from 45deg at left, #0000, #000 1deg 89deg, #0000 90deg) left / 51% 7px repeat-y,
     conic-gradient(from -135deg at right, #0000, #000 1deg 89deg, #0000 90deg) right / 51% 7px repeat-y;
-}
-
-/* Lace-like scalloped top edge with eyelets (footer). */
-.sb-lace {
-  position: relative;
-  -webkit-mask: radial-gradient(14px at 50% 0, #0000 97%, #000) 50% 0 / 28px 100%;
-  mask: radial-gradient(14px at 50% 0, #0000 97%, #000) 50% 0 / 28px 100%;
-}
-.sb-lace::before {
-  content: "";
-  position: absolute;
-  inset: 1.5rem 0 auto;
-  height: 0.5rem;
-  background: radial-gradient(circle, color-mix(in srgb, var(--rose) 70%, transparent) 2.5px, transparent 3px) 0 0 / 14px 100% repeat-x;
-  pointer-events: none;
 }
 
 /* Phone frame around a 9:16 reel. */
@@ -293,6 +373,33 @@ html:has([data-theme="scrapbook"]) {
 .sb-jaali {
   background-image: var(--brand-pattern);
   background-size: 48px 48px;
+}
+
+/* Kites (Makar Sankranti) in the hero sky: fade in once, then a slow sway
+   that runs a fixed number of times and settles (no endless motion, WCAG
+   2.2.2). Each kite sets --tilt (angle), --sway (period) and --phase.
+   The resting pose is the keyframes' `from` state and the iteration count is
+   even with `alternate`, so the last swing ends exactly at rest (ease-in-out,
+   zero velocity): no snap when the animation stops. */
+@keyframes sb-kite-sway {
+  from {
+    transform: translateY(-5px) rotate(calc(var(--tilt, 0deg) - 3.5deg));
+  }
+  to {
+    transform: translateY(5px) rotate(calc(var(--tilt, 0deg) + 3.5deg));
+  }
+}
+.sb-kite {
+  transform: translateY(-5px) rotate(calc(var(--tilt, 0deg) - 3.5deg));
+  transform-origin: 50% 38%;
+  animation:
+    sb-fade 500ms var(--ease-out) var(--d, 0ms) both,
+    sb-kite-sway var(--sway, 8s) ease-in-out var(--phase, 0s) 6 alternate both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sb-kite {
+    animation: sb-fade 300ms ease-out both;
+  }
 }
 
 /* Arch mark (nav lockup) and arch frames. */

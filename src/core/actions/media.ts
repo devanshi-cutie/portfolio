@@ -54,6 +54,19 @@ function validateUpload(upload: CloudinaryUploadResult): ActionResult<ValidUploa
   });
 }
 
+/**
+ * Writing `source_url` before migration 20261125000000 has run fails with
+ * PostgREST "column not in schema cache" (PGRST204) or Postgres 42703.
+ * Turn that into a message the admin can act on.
+ */
+function missingSourceUrlColumn(error: { code?: string; message: string }): ActionResult<never> | null {
+  if ((error.code === "PGRST204" || error.code === "42703") && error.message.includes("source_url")) {
+    const msg = "Links to original posts aren't available yet: the database update that adds them hasn't run. Clear the link to save the rest, or try again after the next deploy.";
+    return fail(msg, { sourceUrl: [msg] });
+  }
+  return null;
+}
+
 function defaultKind(u: ValidUpload): MediaKind {
   if (u.resource_type === "image") return "photo";
   return u.width !== null && u.height !== null && u.height > u.width ? "reel" : "video";
@@ -105,7 +118,7 @@ export async function createMediaFromUpload(
   const { data, error } = await supabase.from("media").insert(row).select(MEDIA_COLUMNS).single();
   if (error) {
     if (error.code === "23505") return fail("That file is already in the library");
-    return dbFail(error, "add the media item");
+    return missingSourceUrlColumn(error) ?? dbFail(error, "add the media item");
   }
 
   updateTag(CONTENT_TAG);
@@ -126,7 +139,7 @@ export async function updateMedia(id: string, patch: MediaPatch): Promise<Action
       ? supabase.from("media").select(MEDIA_COLUMNS).eq("id", id).maybeSingle()
       : supabase.from("media").update(changes).eq("id", id).select(MEDIA_COLUMNS).maybeSingle();
   const { data, error } = await query;
-  if (error) return dbFail(error, "update the media item");
+  if (error) return missingSourceUrlColumn(error) ?? dbFail(error, "update the media item");
   if (!data) return fail("Media not found");
 
   updateTag(CONTENT_TAG);
@@ -142,8 +155,9 @@ export async function bulkUpdateMedia(ids: string[], patch: MediaPatch): Promise
   const parsed = mediaPatchSchema.safeParse(patch);
   if (!parsed.success) return invalid(parsed.error);
 
-  // Edits are per-file geometry, never applied in bulk.
-  const changes = mediaPatchToRow({ ...parsed.data, edits: undefined });
+  // Edits (per-file geometry) and the link to the original post are per item,
+  // never applied in bulk.
+  const changes = mediaPatchToRow({ ...parsed.data, edits: undefined, sourceUrl: undefined });
   if (Object.keys(changes).length === 0) return ok(0);
 
   const { data, error } = await supabase.from("media").update(changes).in("id", parsedIds.data).select("id");

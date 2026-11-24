@@ -2,9 +2,10 @@ import "server-only";
 
 import { cacheLife, cacheTag } from "next/cache";
 import { isSupabaseConfigured } from "@/core/config/env";
+import { formatCompact } from "@/core/instagram/format";
 import { normalizeSettings } from "@/core/schemas/settings";
 import { createSupabasePublicClient } from "@/core/supabase/public";
-import type { Collection, MediaItem, SiteContent } from "@/core/types/content";
+import type { Collection, MediaItem, SiteContent, Stat } from "@/core/types/content";
 import {
   BRAND_COLUMNS,
   COLLECTION_COLUMNS,
@@ -32,6 +33,29 @@ function previewContentAllowed(): boolean {
 }
 
 /**
+ * Fills stats whose source is "site.*" with counts from the published content:
+ * site.brands = published brands, site.reels = published media of kind "reel".
+ * A zero count keeps the stored value (the fallback); a trailing "+" on the
+ * stored value is kept. Themes only ever read `stat.value`.
+ */
+function withSiteCounts(content: SiteContent): SiteContent {
+  const counts: Partial<Record<NonNullable<Stat["source"]>, number>> = {
+    "site.brands": content.brands.length,
+    "site.reels": content.media.filter((m) => m.kind === "reel").length,
+  };
+  let changed = false;
+  const stats = content.settings.stats.map((stat) => {
+    const count = stat.source ? counts[stat.source] : undefined;
+    if (!count) return stat;
+    const value = formatCompact(count) + (stat.value.trim().endsWith("+") ? "+" : "");
+    if (value === stat.value) return stat;
+    changed = true;
+    return { ...stat, value };
+  });
+  return changed ? { ...content, settings: { ...content.settings, stats } } : content;
+}
+
+/**
  * Everything a theme renders: published rows only, sorted by `sort_order`.
  * Cached (`'use cache'`, tag `CONTENT_TAG`) and invalidated by server actions
  * via `updateTag(CONTENT_TAG)`. Without Supabase it returns the preview fixture
@@ -49,7 +73,7 @@ export async function getSiteContent(): Promise<SiteContent> {
           "(or ALLOW_PREVIEW_CONTENT=1 to serve the bundled preview content).",
       );
     }
-    return getPreviewContent();
+    return withSiteCounts(getPreviewContent());
   }
 
   const supabase = createSupabasePublicClient();
@@ -99,7 +123,7 @@ export async function getSiteContent(): Promise<SiteContent> {
   const mediaById: Record<string, MediaItem> = {};
   for (const item of media) mediaById[item.id] = item;
 
-  return {
+  return withSiteCounts({
     settings,
     sections: settings.sections.filter((s) => s.enabled),
     collections,
@@ -108,7 +132,7 @@ export async function getSiteContent(): Promise<SiteContent> {
     testimonials: ((testimonialsRes.data ?? []) as TestimonialRow[]).map(mapTestimonial),
     mediaById,
     preview: false,
-  };
+  });
 }
 
 /** A published collection and its media, in order. `null` when the slug is unknown or unpublished. */

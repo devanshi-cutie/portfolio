@@ -61,6 +61,11 @@ export interface MediaItem {
   posterOffset: number;
   /** non-destructive edits applied at delivery time by Cloudinary; null = original */
   edits: MediaEdits | null;
+  /**
+   * Link to the original post (e.g. the Instagram reel) so visitors can see its
+   * real views, likes and comments. null = not linked.
+   */
+  sourceUrl: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -203,9 +208,37 @@ export interface BrandGroup {
   label: string;
 }
 
+/**
+ * Where a stat's number comes from. "manual" (or absent) shows `value` as typed.
+ * - "instagram.*": `value` is stored; the admin's "Fetch from Instagram" fills
+ *   in fresh numbers for review and "Update website" writes them into `value`.
+ * - "site.*": counted from this site's own published content at render time,
+ *   falling back to `value`.
+ */
+export type StatSource =
+  | "manual"
+  | "instagram.followers" // followers_count
+  | "instagram.posts" // media_count
+  | "instagram.reelViews" // sum of `views` across her reels
+  | "instagram.topReelViews" // highest `views` on a single reel
+  | "site.brands" // published brands on this site
+  | "site.reels"; // published reels on this site
+
+export const STAT_SOURCES: readonly StatSource[] = [
+  "manual",
+  "instagram.followers",
+  "instagram.posts",
+  "instagram.reelViews",
+  "instagram.topReelViews",
+  "site.brands",
+  "site.reels",
+] as const;
+
 export interface Stat {
-  value: string; // "40+", "2.6K"
+  value: string; // "40+", "2.6K" — what the site shows (the fallback for "site.*")
   label: string;
+  /** absent = "manual" */
+  source?: StatSource;
 }
 
 export interface Highlight {

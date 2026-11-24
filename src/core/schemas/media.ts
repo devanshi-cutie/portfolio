@@ -35,6 +35,29 @@ export const mediaEditsSchema = z
     path: ["trimEnd"],
   }) satisfies z.ZodType<MediaEdits>;
 
+/** True for an absolute https URL with a dotted host and no whitespace. */
+function isHttpsUrl(value: string): boolean {
+  if (/\s/.test(value)) return false;
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && url.hostname.includes(".");
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Link to the original post (e.g. an Instagram reel). Trimmed; empty -> null.
+ * Stricter than the DB check (http/https): new links must be https.
+ */
+export const sourceUrlSchema = z
+  .string()
+  .trim()
+  .max(500, "Keep the link under 500 characters")
+  .nullable()
+  .transform((v) => (v ? v : null))
+  .refine((v) => v === null || isHttpsUrl(v), "Paste the full link, starting with https://");
+
 /** Editable media fields; every key optional. */
 export const mediaPatchSchema = z.object({
   kind: mediaKindSchema.optional(),
@@ -47,6 +70,7 @@ export const mediaPatchSchema = z.object({
   published: z.boolean().optional(),
   posterOffset: z.number().min(0).max(36000).optional(),
   edits: mediaEditsSchema.nullable().optional(),
+  sourceUrl: sourceUrlSchema.optional(),
 }) satisfies z.ZodType<MediaPatch>;
 
 /** What the server accepts from a Cloudinary upload widget result. */

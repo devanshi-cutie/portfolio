@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import {
   Building2,
+  Camera,
   ExternalLink,
   FolderOpen,
   Images,
@@ -28,6 +29,7 @@ export const NAV_ITEMS = [
   { href: "/admin/collections", label: "Collections", icon: FolderOpen },
   { href: "/admin/brands", label: "Brands", icon: Building2 },
   { href: "/admin/testimonials", label: "Testimonials", icon: Quote },
+  { href: "/admin/instagram", label: "Instagram", icon: Camera },
   { href: "/admin/inquiries", label: "Inquiries", icon: Inbox },
 ] as const;
 

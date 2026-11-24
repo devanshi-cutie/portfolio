@@ -2,6 +2,7 @@ import { ArrowUpRight, AtSign, Mail, MessageCircle, Phone } from "lucide-react";
 import type { SectionConfig, SiteContent } from "@/core/types/content";
 import { ContactForm } from "../components/ContactForm";
 import { Arrow } from "../components/Doodles";
+import { PatrikaGate } from "../components/jaipur/PatrikaGate";
 import { SectionHeading } from "../components/SectionHeading";
 import { instagramUrl } from "../lib/media";
 import { Reveal } from "../motion/Reveal";
@@ -56,10 +57,15 @@ export function Contact({ content, section }: { content: SiteContent; section: S
           </Reveal>
         </div>
 
-        <Reveal className="relative drop-shadow-[0_24px_30px_rgb(44_17_25/0.16)]">
-          <span aria-hidden className="sb-tape absolute -top-3 right-10 z-[1] block h-6 w-28 rotate-[5deg]" />
-          <ContactForm instagram={ig} name={identity.name} budgetOptions={contact.budgetOptions ?? []} />
-        </Reveal>
+        {/* the letter stands in front of Patrika Gate: the painted arches rise above the card.
+            The top padding is the share of the gate left showing (gate width × 1.5 × 0.4). */}
+        <div className="relative min-w-0 pt-[min(43.2%,15.75rem)] lg:-mt-12">
+          <PatrikaGate className="absolute left-1/2 top-0 w-[72%] max-w-[26.25rem] -translate-x-1/2" />
+          <Reveal className="relative drop-shadow-[0_24px_30px_rgb(44_17_25/0.16)]">
+            <span aria-hidden className="sb-tape absolute -top-3 right-10 z-[1] block h-6 w-28 rotate-[5deg]" />
+            <ContactForm instagram={ig} name={identity.name} budgetOptions={contact.budgetOptions ?? []} />
+          </Reveal>
+        </div>
       </div>
     </section>
   );

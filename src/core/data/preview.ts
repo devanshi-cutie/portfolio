@@ -110,6 +110,7 @@ export function buildPreviewContent(pkg: CreatorPackage = creator): SiteContent 
       sortOrder: i,
       posterOffset: m.posterOffset ?? 0,
       edits: null,
+      sourceUrl: m.sourceUrl ?? null,
       createdAt: FIXTURE_TIME,
       updatedAt: FIXTURE_TIME,
     };

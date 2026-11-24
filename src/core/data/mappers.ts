@@ -40,6 +40,8 @@ export interface MediaRow {
   /** MediaEdits JSON; normalized on read so bad stored data never crashes */
   edits?: unknown;
   source_path?: string | null;
+  /** absent until migration 20261125000000 has run */
+  source_url?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -88,9 +90,22 @@ export interface InquiryRow {
   created_at: string;
 }
 
-/** Column lists, so selects never pull provenance or unknown columns. */
-export const MEDIA_COLUMNS =
-  "id, public_id, resource_type, format, width, height, duration, bytes, kind, title, caption, alt, collection_id, brand_id, featured, published, sort_order, poster_offset, edits, created_at, updated_at";
+/**
+ * Column lists, so selects never pull provenance or unknown columns.
+ *
+ * Media is the exception: it selects `*` so reads keep working on a database
+ * that does not have a newly added column yet (e.g. `source_url` between a
+ * deploy and its migration). Naming a missing column fails the whole query
+ * (Postgres 42703); `*` just omits it and `mapMedia()` falls back to a default.
+ * `mapMedia()` whitelists fields, so extra columns such as `source_path` never
+ * reach a MediaItem.
+ *
+ * Public reads rely on anon's table-level SELECT grant on public.media
+ * (supabase/migrations/20261124000000_init.sql); a column-level grant would
+ * break `*`. TODO: once 20261125000000_media_source_url.sql has run on every
+ * database, go back to an explicit column list that includes source_url.
+ */
+export const MEDIA_COLUMNS = "*";
 export const COLLECTION_COLUMNS = "id, slug, title, description, cover_media_id, sort_order, published";
 export const BRAND_COLUMNS = "id, slug, name, logo_media_id, website_url, tags, featured, sort_order, published";
 export const TESTIMONIAL_COLUMNS =
@@ -126,6 +141,7 @@ export function mapMedia(row: MediaRow): MediaItem {
     sortOrder: row.sort_order,
     posterOffset: num(row.poster_offset) ?? 0,
     edits: normalizeEdits(row.edits),
+    sourceUrl: row.source_url ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -205,6 +221,7 @@ export function mediaPatchToRow(patch: MediaPatch): Record<string, unknown> {
       title: blankToNull(patch.title),
       caption: blankToNull(patch.caption),
       alt: blankToNull(patch.alt),
+      sourceUrl: blankToNull(patch.sourceUrl),
       // null clears; all-default edits are stored as null too
       edits: patch.edits === undefined ? undefined : normalizeEdits(patch.edits),
     },
@@ -219,6 +236,7 @@ export function mediaPatchToRow(patch: MediaPatch): Record<string, unknown> {
       published: "published",
       posterOffset: "poster_offset",
       edits: "edits",
+      sourceUrl: "source_url",
     },
   );
 }

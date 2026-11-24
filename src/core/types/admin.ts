@@ -17,6 +17,8 @@ export interface MediaPatch {
   posterOffset?: number;
   /** null resets to the original */
   edits?: MediaEdits | null;
+  /** link to the original post (http/https); null clears it */
+  sourceUrl?: string | null;
 }
 
 export interface MediaFilter {
