@@ -19,17 +19,15 @@ export function LikeCounter({ label }: { label: string }) {
   useEffect(() => {
     if (tracked.current === pathname) return;
     tracked.current = pathname;
-    let alive = true;
+    // No cancel-on-cleanup: the dev double-run would discard the only call's result.
+    // Totals only ever grow, so a late response can't show a wrong number for long.
     trackAdminView()
       .then((total) => {
-        if (!alive || total === null) return;
-        setCount(total);
+        if (total === null) return;
+        setCount((prev) => (prev === null ? total : Math.max(prev, total)));
         setBump((n) => n + 1);
       })
       .catch(() => {});
-    return () => {
-      alive = false;
-    };
   }, [pathname]);
 
   if (count === null) return null;
