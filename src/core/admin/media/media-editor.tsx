@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import { Slider } from "radix-ui";
-import { Crosshair, RefreshCw, Trash2 } from "lucide-react";
+import { Crop, Crosshair, RefreshCw, Trash2, Wand2 } from "lucide-react";
 import type { Brand, Collection, MediaItem, MediaKind } from "@/core/types/content";
 import { MEDIA_KINDS } from "@/core/types/content";
 import type { MediaPatch } from "@/core/types/admin";
@@ -28,9 +28,11 @@ interface MediaEditorProps {
   onClose: () => void;
   onSaved: (media: MediaItem) => void;
   onDeleted: (id: string) => void;
+  /** open the crop / rotate / adjust studio for this item */
+  onEditVisual: (id: string) => void;
 }
 
-export function MediaEditor({ media, collections, brands, onClose, onSaved, onDeleted }: MediaEditorProps) {
+export function MediaEditor({ media, collections, brands, onClose, onSaved, onDeleted, onEditVisual }: MediaEditorProps) {
   const [dirty, setDirty] = useState(false);
   const open = media !== null;
 
@@ -55,6 +57,7 @@ export function MediaEditor({ media, collections, brands, onClose, onSaved, onDe
           collections={collections}
           brands={brands}
           onDirtyChange={setDirty}
+          onEditVisual={() => onEditVisual(media.id)}
           onSaved={(m) => {
             setDirty(false);
             onSaved(m);
@@ -114,6 +117,7 @@ function EditorBody({
   collections,
   brands,
   onDirtyChange,
+  onEditVisual,
   onSaved,
   onDeleted,
 }: {
@@ -121,6 +125,7 @@ function EditorBody({
   collections: Collection[];
   brands: Brand[];
   onDirtyChange: (dirty: boolean) => void;
+  onEditVisual: () => void;
   onSaved: (media: MediaItem) => void;
   onDeleted: (id: string) => void;
 }) {
@@ -144,6 +149,10 @@ function EditorBody({
   const video = media.resourceType === "video";
   const posterOffset = useWatch({ control, name: "posterOffset" });
   const duration = media.duration && media.duration > 0 ? media.duration : 0;
+  // posterOffset is in seconds of the ORIGINAL clip; the preview below plays the
+  // edited (trimmed) delivery, so it starts at trimStart.
+  const posterMin = media.edits?.trimStart ?? 0;
+  const posterMax = media.edits?.trimEnd ?? duration;
   const poster = video ? videoPosterUrl(media, { width: 720, offset: media.posterOffset }) : null;
 
   const onSubmit = handleSubmit(async (values) => {
@@ -171,7 +180,21 @@ function EditorBody({
 
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-5" aria-label="Edit media details">
-      <div className="overflow-hidden rounded-lg bg-(--a-primary-press)">
+      <div className="flex flex-wrap items-center gap-2">
+        <Button variant="secondary" size="sm" onClick={onEditVisual}>
+          <Crop aria-hidden /> Edit {video ? "video" : "photo"}
+        </Button>
+        <span className="text-xs text-(--a-ink-soft)">
+          {media.edits ? (
+            <span className="inline-flex items-center gap-1">
+              <Wand2 className="size-3.5" aria-hidden /> Edited. The original file is kept.
+            </span>
+          ) : (
+            "Crop, rotate, zoom, adjust light" + (video ? " or trim." : ".")
+          )}
+        </span>
+      </div>
+      <div className="overflow-hidden rounded-lg bg-(--a-ink)">
         {video ? (
           <video
             ref={videoRef}
@@ -207,13 +230,13 @@ function EditorBody({
             render={({ field }) => (
               <Slider.Root
                 className="relative flex h-11 w-full touch-none items-center select-none sm:h-6"
-                min={0}
-                max={duration || 30}
+                min={posterMin}
+                max={posterMax > posterMin ? posterMax : posterMin + 30}
                 step={0.1}
-                value={[field.value]}
+                value={[Math.min(Math.max(field.value, posterMin), posterMax > posterMin ? posterMax : posterMin + 30)]}
                 onValueChange={([v]) => {
                   field.onChange(v);
-                  seek(v);
+                  seek(v - posterMin);
                 }}
                 aria-labelledby="poster-label"
               >
@@ -233,7 +256,7 @@ function EditorBody({
               size="sm"
               variant="ghost"
               onClick={() => {
-                const t = videoRef.current?.currentTime ?? 0;
+                const t = (videoRef.current?.currentTime ?? 0) + posterMin;
                 setValue("posterOffset", Math.round(t * 10) / 10, { shouldDirty: true });
               }}
             >

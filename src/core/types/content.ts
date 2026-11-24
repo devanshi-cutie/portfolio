@@ -59,8 +59,35 @@ export interface MediaItem {
   sortOrder: number;
   /** second of the video used as the poster frame */
   posterOffset: number;
+  /** non-destructive edits applied at delivery time by Cloudinary; null = original */
+  edits: MediaEdits | null;
   createdAt: string;
   updatedAt: string;
+}
+
+/**
+ * Non-destructive edits for a photo or video. The original file on Cloudinary
+ * is never modified: delivery URLs apply these as transformations, in this
+ * order: flip → rotate → crop → adjustments → (video) trim → resize.
+ *
+ * Coordinates follow react-easy-crop: `crop` is a percentage (0–100) rectangle
+ * of the media's bounding box AFTER flip + rotation.
+ */
+export interface MediaEdits {
+  crop: { x: number; y: number; width: number; height: number } | null;
+  /** aspect preset last used in the editor: "original" | "free" | "9:16" | "4:5" | "1:1" | "16:9" (UI only) */
+  aspect: string | null;
+  /** clockwise degrees, -180..180 */
+  rotation: number;
+  flipH: boolean;
+  flipV: boolean;
+  /** -100..100; 0 = unchanged */
+  brightness: number;
+  contrast: number;
+  saturation: number;
+  /** videos only: seconds from the start of the original; null = untouched */
+  trimStart: number | null;
+  trimEnd: number | null;
 }
 
 /* ------------------------------------------------------------ collections */

@@ -98,7 +98,8 @@ export async function createMediaFromUpload(
   const row = {
     ...u,
     kind: defaultKind(u),
-    ...mediaPatchToRow(patch.data),
+    // A new upload starts unedited.
+    ...mediaPatchToRow({ ...patch.data, edits: undefined }),
     sort_order: await nextSortOrder(supabase, "media"),
   };
   const { data, error } = await supabase.from("media").insert(row).select(MEDIA_COLUMNS).single();
@@ -141,7 +142,8 @@ export async function bulkUpdateMedia(ids: string[], patch: MediaPatch): Promise
   const parsed = mediaPatchSchema.safeParse(patch);
   if (!parsed.success) return invalid(parsed.error);
 
-  const changes = mediaPatchToRow(parsed.data);
+  // Edits are per-file geometry, never applied in bulk.
+  const changes = mediaPatchToRow({ ...parsed.data, edits: undefined });
   if (Object.keys(changes).length === 0) return ok(0);
 
   const { data, error } = await supabase.from("media").update(changes).in("id", parsedIds.data).select("id");
@@ -151,7 +153,10 @@ export async function bulkUpdateMedia(ids: string[], patch: MediaPatch): Promise
   return ok(data?.length ?? 0);
 }
 
-/** Swaps the Cloudinary asset behind a media row; keeps id, ordering and links. Destroys the old asset. */
+/**
+ * Swaps the Cloudinary asset behind a media row; keeps id, ordering and links,
+ * resets `edits` to null. Destroys the old asset.
+ */
 export async function replaceMediaAsset(id: string, upload: CloudinaryUploadResult): Promise<ActionResult<MediaItem>> {
   const supabase = await adminClient();
   if (!supabase) return fail(PREVIEW_ERROR);
@@ -167,7 +172,8 @@ export async function replaceMediaAsset(id: string, upload: CloudinaryUploadResu
 
   const { data, error } = await supabase
     .from("media")
-    .update(valid.data)
+    // New file = new geometry: drop crop/rotation/trim made for the old one.
+    .update({ ...valid.data, edits: null })
     .eq("id", id)
     .select(MEDIA_COLUMNS)
     .maybeSingle();

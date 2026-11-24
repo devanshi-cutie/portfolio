@@ -11,6 +11,7 @@
  */
 import { Film } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { editedDimensions } from "@/core/cloudinary/urls";
 import type { MediaItem } from "@/core/types/content";
 import { isVideo, labelOf, posterOf, videoSrcOf, withFrameHint } from "../lib/media";
 import { cn } from "../lib/cn";
@@ -73,8 +74,8 @@ export function PreviewMedia({
       <img
         src={poster ?? ""}
         alt={labelOf(media)}
-        width={media.width ?? undefined}
-        height={media.height ?? undefined}
+        width={editedDimensions(media)?.width}
+        height={editedDimensions(media)?.height}
         sizes={sizes}
         loading={eager ? "eager" : "lazy"}
         fetchPriority={eager ? "high" : undefined}

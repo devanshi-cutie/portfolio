@@ -163,8 +163,8 @@ export function ConfirmDialog({
   return (
     <AlertDialog.Root open={open} onOpenChange={(next) => (pending ? undefined : onOpenChange(next))}>
       <AlertDialog.Portal container={container}>
-        <AlertDialog.Overlay className="adm-overlay fixed inset-0 z-[60] bg-(--a-overlay)" />
-        <AlertDialog.Content className="adm-modal fixed inset-x-0 bottom-0 z-[60] w-full rounded-t-xl bg-(--a-surface) p-5 shadow-[0_24px_60px_-20px_color-mix(in_oklab,var(--a-ink)_45%,transparent)] outline-none sm:inset-x-auto sm:bottom-auto sm:top-1/2 sm:left-1/2 sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl">
+        <AlertDialog.Overlay className="adm-overlay fixed inset-0 z-[80] bg-(--a-overlay)" />
+        <AlertDialog.Content className="adm-modal fixed inset-x-0 bottom-0 z-[80] w-full rounded-t-xl bg-(--a-surface) p-5 shadow-[0_24px_60px_-20px_color-mix(in_oklab,var(--a-ink)_45%,transparent)] outline-none sm:inset-x-auto sm:bottom-auto sm:top-1/2 sm:left-1/2 sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl">
           <AlertDialog.Title className="adm-display text-lg font-semibold text-(--a-ink)">{title}</AlertDialog.Title>
           <AlertDialog.Description className="mt-2 text-sm text-(--a-ink-soft)">{description}</AlertDialog.Description>
           {children ? <div className="mt-4">{children}</div> : null}

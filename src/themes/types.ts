@@ -1,4 +1,4 @@
-import type { ComponentType, ReactNode } from "react";
+import type { ComponentType, ReactElement, ReactNode } from "react";
 import type { Collection, MediaItem, SiteContent } from "@/core/types/content";
 
 /** The exact brand token keys every theme exports (the admin panel styles itself with them). */
@@ -26,6 +26,25 @@ export type OptionalBrandTokenKey =
   | "--brand-shadow"
   /** border-radius for a hero panel (e.g. an arch) */
   | "--brand-radius-hero";
+
+/** A font passed to next/og (Satori needs TTF/OTF/WOFF data, not CSS). */
+export interface ShareCardFont {
+  name: string;
+  data: ArrayBuffer;
+  weight: 400 | 500 | 600 | 700;
+  style: "normal" | "italic";
+}
+
+/**
+ * The social preview image (Open Graph / X card). Exported from a theme's
+ * `share-card.tsx` and wired in `src/themes/active-share.ts`; it must stay
+ * server-only and free of next/font / client code.
+ */
+export interface ShareCard {
+  element: ReactElement;
+  fonts: ShareCardFont[];
+  size: { width: number; height: number };
+}
 
 export interface ThemeBrand {
   /** next/font `.variable` classes (display + body); put on an ancestor of anything using the font vars */

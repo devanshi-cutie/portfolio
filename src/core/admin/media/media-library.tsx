@@ -18,6 +18,7 @@ import { SortableContainer, SortableItem, moveItem } from "../ui/sortable";
 import { UploadButton } from "../upload/upload-button";
 import { MediaCard } from "./media-card";
 import { MediaEditor } from "./media-editor";
+import { MediaStudio } from "./media-studio";
 import { BulkBar } from "./bulk-bar";
 import { KIND_SHORT, guessKind, mediaLabel } from "./labels";
 
@@ -105,6 +106,11 @@ export function MediaLibrary({ media, collections, brands }: MediaLibraryProps) 
   );
 
   const openEditor = useCallback((id: string) => setEditingId(id), []);
+  const [studioId, setStudioId] = useState<string | null>(null);
+  const openStudio = useCallback((id: string) => setStudioId(id), []);
+  const studioMedia = studioId ? (items.find((m) => m.id === studioId) ?? null) : null;
+  /** items created by the current upload batch, in order */
+  const uploadedBatch = useRef<MediaItem[]>([]);
 
   /* -------------------------------------------------------------- reorder */
 
@@ -184,12 +190,26 @@ export function MediaLibrary({ media, collections, brands }: MediaLibraryProps) 
             multiple
             onUploaded={async (upload) => {
               const result = await callAction(() => createMediaFromUpload(upload, uploadDefaults(upload)));
-              if (result.ok) setItems((list) => [...list, result.data]);
+              if (result.ok) {
+                uploadedBatch.current.push(result.data);
+                setItems((list) => [...list, result.data]);
+              }
               return result.ok;
             }}
             onDone={(count) => {
-              if (count > 0) toast.success(`Added ${pluralize(count, "file")}. Open each one to add a title.`);
+              const batch = uploadedBatch.current;
+              uploadedBatch.current = [];
               router.refresh();
+              if (count === 1 && batch[0]) {
+                // one file: go straight to crop / rotate / adjust
+                setStudioId(batch[0].id);
+              } else if (count > 1) {
+                const first = batch[0];
+                toast.success(`Uploaded ${pluralize(count, "file")}`, {
+                  description: "Open each one to add a title, or crop and adjust it.",
+                  action: first ? { label: "Edit first", onClick: () => setStudioId(first.id) } : undefined,
+                });
+              }
             }}
           />
         }
@@ -291,6 +311,7 @@ export function MediaLibrary({ media, collections, brands }: MediaLibraryProps) 
                     isDragging={isDragging}
                     onToggleSelect={toggleSelect}
                     onOpen={openEditor}
+                    onEditVisual={openStudio}
                   />
                 )}
               </SortableItem>
@@ -312,6 +333,7 @@ export function MediaLibrary({ media, collections, brands }: MediaLibraryProps) 
         media={editing}
         collections={collections}
         brands={brands}
+        onEditVisual={openStudio}
         onClose={() => setEditingId(null)}
         onSaved={(updated) => {
           setItems((list) => list.map((m) => (m.id === updated.id ? updated : m)));
@@ -325,6 +347,14 @@ export function MediaLibrary({ media, collections, brands }: MediaLibraryProps) 
             next.delete(id);
             return next;
           });
+          router.refresh();
+        }}
+      />
+      <MediaStudio
+        media={studioMedia}
+        onClose={() => setStudioId(null)}
+        onSaved={(updated) => {
+          setItems((list) => list.map((m) => (m.id === updated.id ? updated : m)));
           router.refresh();
         }}
       />

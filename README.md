@@ -97,11 +97,12 @@ Go to `/admin` and enter the password; the sign-in page greets her by name with 
 - **Profile & SEO**: name, tagline, bio, location, rotating keywords, portrait/hero/share image, email, phone, WhatsApp, social links, Google title and description
 - **Page sections**: reorder, show/hide, and rename every homepage section; edit the numbers, "why work with me" highlights, services and process steps
 - **Media library**: upload photos and videos, replace a file, delete, change title/caption, assign a collection or brand, feature, publish/hide, drag to reorder, pick a video's cover frame
+- **Photo & video editor** (crop icon on any item, or right after an upload): crop with shape presets (Original, 9:16, 4:5, 1:1, 16:9), zoom, rotate, straighten, flip, brightness/contrast/saturation, and trim videos. Edits are non-destructive: the original stays on Cloudinary and **Reset to original** undoes everything
 - **Collections**: the work categories (Jewellery, Real estate…) and their covers
 - **Brands**: add brands she has worked with, upload logos, tag UGC/Instagram, feature, reorder
 - **Testimonials** and **Inquiries** (messages from the contact form)
 
-Changes go live on the public site straight away. If you ever edit data directly in Supabase or re-run the seed after deploying, press **Refresh live site** on the admin dashboard.
+Changes go live on the public site straight away. The link preview card (what WhatsApp, Instagram, LinkedIn and X show when the site is shared) is generated from her name, tagline, featured brands and portrait (or the share image set under Profile & SEO); it refreshes on the next deploy, and the apps themselves cache previews for a while. If you ever edit data directly in Supabase or re-run the seed after deploying, press **Refresh live site** on the admin dashboard.
 
 ## 7. Reusing this for another creator
 

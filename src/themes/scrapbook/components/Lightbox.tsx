@@ -13,12 +13,19 @@ import { AnimatePresence, motion, useDragControls, useIsPresent, useReducedMotio
 import Link from "next/link";
 import { useCallback, useEffect, useId, useRef, useState, useSyncExternalStore, type PointerEvent } from "react";
 import { createPortal } from "react-dom";
+import { editedDimensions } from "@/core/cloudinary/urls";
 import type { MediaItem } from "@/core/types/content";
 import type { MediaMeta } from "../lib/media";
 import { isVideo, labelOf, posterOf, videoSrcOf } from "../lib/media";
 import { EASE_IN, EASE_MOVE, EASE_OUT } from "../motion/easing";
 import { useFinePointer } from "../motion/hooks";
 import { pauseAll } from "../motion/playback";
+
+/** Aspect ratio of the item as displayed (after its crop/rotation edits). */
+function aspectStyle(item: MediaItem) {
+  const dims = editedDimensions(item);
+  return dims ? { aspectRatio: `${dims.width} / ${dims.height}` } : undefined;
+}
 
 const noop = () => () => {};
 const useIsClient = () => useSyncExternalStore(noop, () => true, () => false);
@@ -183,7 +190,7 @@ function Panel({ items, metas, index, onIndex, onClose, instagram, noun = "Item"
               key={item.id}
               custom={dir}
               className="relative aspect-[9/16] h-full max-h-[78dvh] max-w-full overflow-hidden rounded-[1.4rem] bg-[#1f0c12] shadow-[0_30px_80px_-20px_rgb(0_0_0/0.7)] md:max-h-[86dvh]"
-              style={item.width && item.height ? { aspectRatio: `${item.width} / ${item.height}` } : undefined}
+              style={aspectStyle(item)}
               initial={reduce ? { opacity: 0 } : { opacity: 0, x: dir * 60 }}
               animate={{ opacity: 1, x: 0, transition: { duration: 0.26, ease: EASE_MOVE } }}
               exit={reduce ? { opacity: 0 } : { opacity: 0, x: dir * -60, transition: { duration: 0.14, ease: EASE_IN } }}

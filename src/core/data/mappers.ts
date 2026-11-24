@@ -3,6 +3,7 @@
  * Mappers are defensive about numeric columns (`numeric` arrives as a string
  * from PostgREST in some configurations).
  */
+import { normalizeEdits } from "@/core/lib/media-edits";
 import type { BrandInput, CollectionInput, MediaPatch, TestimonialInput } from "@/core/types/admin";
 import type {
   Brand,
@@ -36,6 +37,8 @@ export interface MediaRow {
   published: boolean;
   sort_order: number;
   poster_offset: number | string | null;
+  /** MediaEdits JSON; normalized on read so bad stored data never crashes */
+  edits?: unknown;
   source_path?: string | null;
   created_at: string;
   updated_at: string;
@@ -87,7 +90,7 @@ export interface InquiryRow {
 
 /** Column lists, so selects never pull provenance or unknown columns. */
 export const MEDIA_COLUMNS =
-  "id, public_id, resource_type, format, width, height, duration, bytes, kind, title, caption, alt, collection_id, brand_id, featured, published, sort_order, poster_offset, created_at, updated_at";
+  "id, public_id, resource_type, format, width, height, duration, bytes, kind, title, caption, alt, collection_id, brand_id, featured, published, sort_order, poster_offset, edits, created_at, updated_at";
 export const COLLECTION_COLUMNS = "id, slug, title, description, cover_media_id, sort_order, published";
 export const BRAND_COLUMNS = "id, slug, name, logo_media_id, website_url, tags, featured, sort_order, published";
 export const TESTIMONIAL_COLUMNS =
@@ -122,6 +125,7 @@ export function mapMedia(row: MediaRow): MediaItem {
     published: row.published,
     sortOrder: row.sort_order,
     posterOffset: num(row.poster_offset) ?? 0,
+    edits: normalizeEdits(row.edits),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -196,7 +200,14 @@ const blankToNull = (v: string | null | undefined): string | null | undefined =>
 
 export function mediaPatchToRow(patch: MediaPatch): Record<string, unknown> {
   return pick(
-    { ...patch, title: blankToNull(patch.title), caption: blankToNull(patch.caption), alt: blankToNull(patch.alt) },
+    {
+      ...patch,
+      title: blankToNull(patch.title),
+      caption: blankToNull(patch.caption),
+      alt: blankToNull(patch.alt),
+      // null clears; all-default edits are stored as null too
+      edits: patch.edits === undefined ? undefined : normalizeEdits(patch.edits),
+    },
     {
       kind: "kind",
       title: "title",
@@ -207,6 +218,7 @@ export function mediaPatchToRow(patch: MediaPatch): Record<string, unknown> {
       featured: "featured",
       published: "published",
       posterOffset: "poster_offset",
+      edits: "edits",
     },
   );
 }

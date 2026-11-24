@@ -2,7 +2,7 @@
  * Input/patch shapes shared by the admin UI (src/core/admin, src/app/admin) and
  * the server actions (src/core/actions). Zod schemas in src/core/schemas mirror these.
  */
-import type { InquiryStatus, MediaKind } from "./content";
+import type { InquiryStatus, MediaEdits, MediaKind } from "./content";
 
 /** Editable fields of a media item. */
 export interface MediaPatch {
@@ -15,6 +15,8 @@ export interface MediaPatch {
   featured?: boolean;
   published?: boolean;
   posterOffset?: number;
+  /** null resets to the original */
+  edits?: MediaEdits | null;
 }
 
 export interface MediaFilter {

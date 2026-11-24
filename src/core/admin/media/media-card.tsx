@@ -1,7 +1,7 @@
 "use client";
 
 import { memo } from "react";
-import { EyeOff, Play, Star } from "lucide-react";
+import { Crop, EyeOff, Play, Star, Wand2 } from "lucide-react";
 import type { MediaItem } from "@/core/types/content";
 import { cn } from "../lib/cn";
 import { formatDuration } from "../lib/format";
@@ -18,10 +18,17 @@ interface MediaCardProps {
   isDragging: boolean;
   onToggleSelect: (id: string, shiftKey: boolean) => void;
   onOpen: (id: string) => void;
+  /** open the crop / rotate / adjust studio */
+  onEditVisual: (id: string) => void;
 }
 
-export const MediaCard = memo(function MediaCard({ media, selected, meta, isDragging, onToggleSelect, onOpen }: MediaCardProps) {
+export const MediaCard = memo(function MediaCard({ media, selected, meta, isDragging, onToggleSelect, onOpen, onEditVisual }: MediaCardProps) {
   const label = mediaLabel(media);
+  const edits = media.edits;
+  const length =
+    media.resourceType === "video" && media.duration
+      ? (edits?.trimEnd ?? media.duration) - (edits?.trimStart ?? 0)
+      : media.duration;
   return (
     <div
       className={cn(
@@ -57,7 +64,19 @@ export const MediaCard = memo(function MediaCard({ media, selected, meta, isDrag
           />
         </label>
 
-        <div className="absolute top-1 right-1 rounded-md bg-(--a-surface)/85 opacity-100 backdrop-blur-sm transition-opacity duration-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 [@media(hover:hover)]:has-[:focus-visible]:opacity-100">
+        <div className="absolute top-1 right-1 flex items-center rounded-md bg-(--a-surface)/85 opacity-100 backdrop-blur-sm transition-opacity duration-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 [@media(hover:hover)]:has-[:focus-visible]:opacity-100">
+          <button
+            type="button"
+            onClick={() => onEditVisual(media.id)}
+            aria-label={`Crop, rotate or adjust ${label}`}
+            title="Crop, rotate, adjust"
+            className={cn(
+              "inline-flex size-11 cursor-pointer items-center justify-center rounded-md text-(--a-ink-soft) hover:bg-(--a-muted) hover:text-(--a-ink) sm:pointer-fine:size-8",
+              focusRing,
+            )}
+          >
+            <Crop className="size-4" aria-hidden />
+          </button>
           <DragHandle label={label} />
         </div>
 
@@ -65,13 +84,19 @@ export const MediaCard = memo(function MediaCard({ media, selected, meta, isDrag
           {media.resourceType === "video" ? (
             <Badge tone="dark">
               <Play aria-hidden className="fill-current" />
-              {formatDuration(media.duration) || "Video"}
+              {formatDuration(length) || "Video"}
             </Badge>
           ) : null}
           {!media.published ? (
             <Badge tone="amber">
               <EyeOff aria-hidden />
               Draft
+            </Badge>
+          ) : null}
+          {edits ? (
+            <Badge tone="neutral">
+              <Wand2 aria-hidden />
+              Edited
             </Badge>
           ) : null}
           {media.featured ? (

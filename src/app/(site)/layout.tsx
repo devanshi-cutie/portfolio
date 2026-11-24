@@ -1,15 +1,12 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
-import { imageUrl } from "@/core/cloudinary/urls";
 import { siteUrl } from "@/core/config/env";
 import { getSiteContent } from "@/core/data/site";
 import theme from "@/themes/active";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const { settings, mediaById } = await getSiteContent();
+  const { settings } = await getSiteContent();
   const { seo, identity } = settings;
-  const og = seo.ogImageMediaId ? mediaById[seo.ogImageMediaId] : undefined;
-  const ogUrl = og ? imageUrl(og, { width: 1200, height: 630, crop: "fill", gravity: "face" }) : undefined;
   const title = seo.title || `${identity.name} | ${identity.role}`;
   const description = seo.description || identity.tagline;
   return {
@@ -21,9 +18,9 @@ export async function generateMetadata(): Promise<Metadata> {
       siteName: identity.name,
       title,
       description,
-      images: ogUrl ? [{ url: ogUrl, width: 1200, height: 630, alt: identity.name }] : undefined,
+      // the image comes from ./opengraph-image.tsx (the theme's share card)
     },
-    twitter: { card: ogUrl ? "summary_large_image" : "summary", title, description },
+    twitter: { card: "summary_large_image", title, description },
   };
 }
 
