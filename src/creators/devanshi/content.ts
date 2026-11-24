@@ -121,7 +121,6 @@ export const settings: SiteSettings = {
 export const settingsMedia: CreatorPackage["settingsMedia"] = {
   portraitSource: "portrait-devanshi.jpg",
   heroSource: "Outdoor city shoot/1762495003611255.mp4",
-  ogImageSource: "IMG_5777.JPG.jpeg",
 };
 
 /* ---------------------------------------------------------- collections */

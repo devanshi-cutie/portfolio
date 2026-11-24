@@ -83,7 +83,7 @@ function Card({ content, photo }: { content: SiteContent; photo: string | null }
   const eyebrow = [identity.role, city].filter(Boolean).join(" · ").toUpperCase();
   const brands = content.brands
     .filter((b) => b.featured)
-    .slice(0, 4)
+    .slice(0, 3)
     .map((b) => b.name);
   const nameSize = identity.name.length > 18 ? 84 : 104;
   const tagline = identity.tagline.length > 110 ? `${identity.tagline.slice(0, 107)}…` : identity.tagline;
