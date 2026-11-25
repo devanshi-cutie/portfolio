@@ -1,9 +1,20 @@
 import { ArrowUpRight } from "lucide-react";
 import { SITE_CREDIT } from "@/core/lib/credit";
+import { trackAttr } from "@/core/lib/track-events";
 import type { SiteContent } from "@/core/types/content";
 import { instagramUrl } from "../lib/media";
 import { Heart } from "./Doodles";
 import { Skyline } from "./jaipur/Skyline";
+
+/**
+ * Click target for a footer social link: a short slug (the server only counts
+ * /^[a-z0-9_-]{1,32}$/). Instagram is named by placement, like elsewhere.
+ */
+function socialTarget(platform: string): string {
+  const slug = platform.trim().toLowerCase().replace(/[^a-z0-9_-]/g, "-").slice(0, 32);
+  if (slug === "instagram") return "instagram-footer";
+  return slug || "other";
+}
 
 /** Peak-end: a rose page under the Pink City skyline, with a big italic "Thank you". */
 export function Footer({ content }: { content: SiteContent }) {
@@ -23,6 +34,7 @@ export function Footer({ content }: { content: SiteContent }) {
             href={ig}
             target="_blank"
             rel="noopener noreferrer"
+            data-track={trackAttr("social_click", "instagram-footer")}
             className="sb-display mt-3 inline-flex min-h-11 items-center gap-2 text-[clamp(1.4rem,3vw,2rem)] hover:text-(--blush)"
           >
             @{identity.handle}
@@ -42,6 +54,7 @@ export function Footer({ content }: { content: SiteContent }) {
                     href={s.url}
                     target="_blank"
                     rel="noopener noreferrer"
+                    data-track={trackAttr("social_click", socialTarget(s.platform))}
                     className="inline-flex min-h-11 items-center font-semibold underline decoration-(--blush)/60 underline-offset-4 hover:decoration-(--blush)"
                   >
                     {s.label}

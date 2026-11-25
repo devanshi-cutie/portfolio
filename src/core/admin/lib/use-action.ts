@@ -16,6 +16,8 @@ export interface RunOptions {
   rollback?: () => void;
   /** refresh server components after success (default true) */
   refresh?: boolean;
+  /** skip the error toast; the caller shows the failure itself (default false) */
+  silentError?: boolean;
 }
 
 /**
@@ -24,7 +26,7 @@ export interface RunOptions {
  */
 export async function callAction<T>(
   fn: () => Promise<ActionResult<T>>,
-  opts: Pick<RunOptions, "success" | "optimistic" | "rollback"> = {},
+  opts: Pick<RunOptions, "success" | "optimistic" | "rollback" | "silentError"> = {},
 ): Promise<ActionResult<T>> {
   opts.optimistic?.();
   let result: ActionResult<T>;
@@ -39,7 +41,7 @@ export async function callAction<T>(
     if (opts.success) toast.success(opts.success);
   } else {
     opts.rollback?.();
-    toast.error(result.error);
+    if (!opts.silentError) toast.error(result.error);
   }
   return result;
 }

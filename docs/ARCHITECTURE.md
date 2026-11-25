@@ -82,6 +82,8 @@ type ActionResult<T = void> = { ok: true; data: T } | { ok: false; error: string
 ### API routes
 - `POST /api/cloudinary/sign` — admin only; body `{ paramsToSign }` (next-cloudinary `CldUploadWidget` `signatureEndpoint` format); forces `folder` under `NEXT_PUBLIC_CLOUDINARY_FOLDER`; returns `{ signature }`.
 - `GET /api/dev-media/[...path]` — preview mode only (see above).
+- `POST /api/track` — **public** first-party click counter; body `{ event, target? }`; always `204` with no body, counted or not (drop rules under **Analytics**).
+- `GET /api/cron/analytics` — Vercel Cron only (`vercel.json`, daily 00:30 UTC); `401` unless `Authorization: Bearer <CRON_SECRET>`; returns the `SyncResult`. `maxDuration = 60`.
 
 ## Themes
 
@@ -95,13 +97,13 @@ export interface ThemeModule {
   CollectionPage: ComponentType<{ content: SiteContent; collection: Collection; items: MediaItem[] }>;
 }
 ```
-`src/themes/active.ts` re-exports the active theme (`export { default } from "./scrapbook"`). Routes in `src/app/(site)/` stay thin: fetch `getSiteContent()`, render the theme. A theme may import from `@/core/types`, `@/core/cloudinary/urls`, `@/core/lib`, and `@/core/actions/inquiries` (`submitInquiry`) — nothing else from core, and nothing from `src/core/admin`. Themes render the sections listed in `content.sections` in that order and skip keys they don't implement. Theme CSS/tokens/fonts live inside the theme folder; the root layout stays theme-neutral.
+`src/themes/active.ts` re-exports the active theme (`export { default } from "./scrapbook"`). Routes in `src/app/(site)/` stay thin: fetch `getSiteContent()`, render the theme. A theme may import from `@/core/types`, `@/core/cloudinary/urls`, `@/core/lib`, and `@/core/actions/inquiries` (`submitInquiry`) — nothing else from core, and nothing from `src/core/admin`. For click tracking that means `@/core/lib/track` (`track()`), `@/core/lib/track-events` (`trackAttr()`, event names) and `@/core/lib/track-clicks` (`TrackClicks`); never `@/core/analytics` (server-only). Themes render the sections listed in `content.sections` in that order and skip keys they don't implement. Theme CSS/tokens/fonts live inside the theme folder; the root layout stays theme-neutral.
 
 ## Admin panel (`/admin`)
 
 Theme-independent and shared by every creator. Routes in `src/app/admin/`, components in `src/core/admin/`. Neutral, dense, fast UI (Tailwind, Radix primitives via `radix-ui`, `sonner` toasts, `@dnd-kit` for reordering, `react-hook-form` + zod for complex forms).
 
-Screens: login · dashboard (counts, recent inquiries, quick links) · **Profile & contact** (identity, bio, keywords, portrait/hero/OG media pickers, contact, socials) · **Page sections** (reorder, show/hide, edit eyebrow/title/subtitle; stats, highlights, services, process lists) · **Media library** (grid with posters, filter by kind/collection/brand/published, upload via Cloudinary widget, edit metadata, replace file, delete with confirm, drag reorder, bulk publish/assign) · **Collections** · **Brands** (logo upload, tags, featured, reorder) · **Testimonials** · **Inquiries** (inbox, mark read/archive, delete, mailto reply) · SEO lives under Profile.
+Screens: login · dashboard (counts, recent inquiries, quick links) · **Profile & contact** (identity, bio, keywords, portrait/hero/OG media pickers, contact, socials) · **Page sections** (reorder, show/hide, edit eyebrow/title/subtitle; stats, highlights, services, process lists) · **Media library** (grid with posters, filter by kind/collection/brand/published, upload via Cloudinary widget, edit metadata, replace file, delete with confirm, drag reorder, bulk publish/assign) · **Collections** · **Brands** (logo upload, tags, featured, reorder) · **Testimonials** · **Inquiries** (inbox, mark read/archive, delete, mailto reply) · **Instagram** · **Analytics** (Vercel visits copied into Supabase: daily chart, top pages/referrers/countries/devices/browsers; first-party click counts; range picker; Refresh) · SEO lives under Profile.
 
 ## Seed (`npm run seed`)
 
@@ -163,6 +165,10 @@ Admin = one password (`ADMIN_PASSWORD`). `src/core/auth/mode.ts` (`isAdminPasswo
 - **Login lockout is per server instance** (in-memory). On Vercel each instance keeps its own counters; a strong `ADMIN_PASSWORD` is the real protection. Shared storage (e.g. Upstash) would be the upgrade.
 - **Sessions are stateless** (7-day signed cookie). Signing out clears the cookie; to revoke every session, change `ADMIN_PASSWORD` (or `ADMIN_SESSION_SECRET`) and redeploy.
 - **Upload widget param allowlist** (`/api/cloudinary/sign`) has not been exercised against a live Cloudinary account yet. If an upload fails with "Unsupported upload params", add the reported key to `ALLOWED_PARAMS` after checking it is harmless.
+- **`/api/track` throttle is per server instance** (in-memory, 60 hits per IP per 10 minutes). Instances don't share it, so it slows a casual spammer but doesn't stop one.
+- **Click counts can be inflated.** The endpoint is public and stores nothing about the visitor, so anyone can post fake clicks (within the throttle and the same-origin check, which a non-browser client can fake). Target checks keep them to valid slugs and existing media ids, so spam inflates counts but can't add free-text rows. Treat the numbers as a trend, not an audit.
+- **No Vercel custom events on Hobby.** Clicks are counted first-party (`/api/track` → Supabase) instead of with `@vercel/analytics` `track()`. Moving to Pro wouldn't change this unless the code is switched over.
+- **Vercel's "Others" row shape is unverified.** Breakdown requests use `limit=50`; Vercel groups the rest into an overflow row. `isOthersRow()` in `vercel.ts` guesses its shape (a value of "Others", or a missing key plus an `others`/`isOthers` flag) and stores it as `(other)`. If a real overflow row slips through, it would show up as `(unknown)` or a literal value.
 
 ## Media edits (binding)
 
@@ -185,3 +191,67 @@ Stats can carry a `source` (`StatSource` in `src/core/types/content.ts`; absent 
 - **Flow:** `fetchInstagram()` (requireAdmin) reads `/me` (followers_count, media_count), pages `/me/media` (cap 200) and reads `/{id}/insights?metric=views` for each reel (at most 6 in flight). One 40 s budget covers the whole refresh and partial results come back with a warning; the page sets `maxDuration = 60`. Permission errors become a warning with `null` views. It returns the snapshot plus a review from `buildReview()` (each instagram.* stat's current vs proposed value) and stores nothing. `applyInstagram({ update: [{ index, source, value }], add: [{ source, value }] })` receives the ticked rows with their raw counts from the page. That is acceptable because only the signed-in admin can call it and she can type any number in Page sections anyway. The counts are validated strictly (known sources, whole numbers 0–10¹², indexes in range and still holding that source, no duplicates), formatted on the server, and written to `site_settings` with `updateTag(CONTENT_TAG)`.
 - **Formatting** (`format.ts`): 119 → "119", 2632 → "2.6K", 231522 → "231K", 1.2M. Values are rounded down, and a trailing "+" on the current value is kept.
 - **Known limits:** applying writes the stored settings plus the new values, so a Page sections tab left open with older numbers can overwrite them on its next save; the success toast says to reload it. A reel's insights can lag up to 48 h.
+
+## Analytics (binding)
+
+One admin tab (`/admin/analytics`), two sources: **Vercel Web Analytics** (visits), copied into Supabase so history outlives Vercel's retention (1 month on Hobby), and **first-party click counts** (Vercel custom events aren't on Hobby). Migration `20261125030000_analytics.sql`. All days are UTC.
+
+- **Tables** (RLS on, no policies, everything revoked from `anon`/`authenticated`, granted to `service_role` only):
+  - `analytics_daily` — `day date` pk, `pageviews`, `visitors` (unique **per day** only: never sum it as "people"), `synced_at`, `breakdown_synced_at` (null until the day's breakdown is fully written).
+  - `analytics_daily_breakdown` — pk `(day, dimension, value)`, plus `pageviews`, `visitors`. `dimension` ∈ `path | referrer | country | device | browser`; `value` 1–300 chars. Empty values are stored as `(direct)` (referrer) or `(unknown)`; Vercel's overflow row as `(other)`.
+  - `analytics_interactions` — pk `(day, event, target)`, plus `count`. `event` matches `^[a-z_]{1,32}$`; `target` ≤ 80 chars, default `''`.
+- **Functions** (all `set search_path = public`, execute revoked from `public, anon, authenticated`, granted to `service_role` only):
+  - `analytics_track(p_event, p_target) → bigint` (`language sql`) — adds 1 to today's (UTC) row (insert … on conflict do update) and returns the new count. The table checks reject bad events.
+  - `analytics_replace_breakdown(p_day, p_dimension, p_rows jsonb) → integer` (`plpgsql`) — replaces one `(day, dimension)` in a single transaction: takes a transaction-scoped advisory lock on that pair, deletes its rows, then inserts `p_rows` (grouped by value, negatives clamped to 0, `on conflict do update`). Returns the rows written. Two syncs at once can't interleave or leave a half-written breakdown.
+  - `analytics_breakdown(p_since, p_until, p_limit)` → `(dimension, value, pageviews, visitors)` (`language sql`) — top `p_limit` values per dimension over the range (null = unbounded), summed across days, ranked by pageviews.
+  - `analytics_interaction_summary(p_since, p_until, p_limit)` → `(event, target, count, event_total)` (`language sql`) — top targets per event; `event_total` sums **all** targets before the cut, so adding up the top rows never undercounts.
+- **Env** (server-only, read only in `src/core/analytics/config.ts`): `VERCEL_ANALYTICS_TOKEN`, `VERCEL_ANALYTICS_PROJECT_ID`, optional `VERCEL_ANALYTICS_TEAM_ID` (sent as `teamId` only when set), `CRON_SECRET` (shorter than 16 chars counts as unset). Never `NEXT_PUBLIC_`, never stored, logged or sent to the browser. `getAnalyticsStatus()` (requireAdmin) returns only `{ configured, storageReady }`.
+- **Modules:** `src/core/analytics/` is `server-only` except `types.ts`.
+  - `vercel.ts` — client for `GET https://api.vercel.com/v1/query/web-analytics/visits/aggregate`. 8 s timeout per call; the token travels only in the `Authorization` header. Errors become `VercelAnalyticsError` with a reason: 401/403 → `token`, 429 → `rate_limited`, 404 and other statuses or a bad body → `unavailable`, fetch failure or timeout → `network`. Error messages are `HTTP <status> [code]` at most, never the URL, headers or Vercel's text. Counts are parsed with zod and clamped to non-negative integers. `fetchDailyTotals(cfg, since, until)` (`by=day`, `limit=100`), `fetchDayBreakdown(cfg, dim, day)` (`limit=50`; dims map to `requestPath`, `referrerHostname`, `country`, `deviceType`, `browserName`).
+  - `sync.ts` — `runAnalyticsSync({ force?, budgetMs?, now? }): Promise<SyncResult>`. Does no auth; callers authorize.
+  - `interactions.ts` — `recordInteraction(event, target): Promise<void>`. Public code paths call it; it never throws. It is a no-op unless `VERCEL_ENV === "production"`, without the service role, for a malformed target (`isValidTarget()`), and for a media id that isn't a row in `media` (primary-key lookup, so random uuids can't add rows). Also exports `normalizeTarget()` (sanitized + lowercased) and `isValidTarget(event, target)`.
+  - Reads: `getAnalyticsOverview(range)` in `src/core/data/analytics.ts` (requireAdmin, uncached, empty in preview; ranges `7d | 30d | 90d | 12m | all`, top 10 per dimension, top 5 targets per event).
+  - Action: `syncAnalytics({ force? }): ActionResult<SyncResult>` in `src/core/actions/analytics.ts` (requireAdmin; preview → `fail(PREVIEW_ERROR)`). Touches no cache tags: nothing public is built from this data.
+- **Sync algorithm** (`runAnalyticsSync`):
+  1. Missing config → `error` / `not_configured`; missing service role → `error` / `storage`.
+  2. **10-minute skip:** unless `force`, if the newest `analytics_daily.synced_at` is under 10 minutes old, return `skipped` without calling Vercel. The admin page syncs unforced on open and **Refresh from Vercel** passes `force: true`. The cron passes `force: false`, so a duplicate delivery minutes later comes back `skipped`.
+  3. One `by=day` request for the last **30** UTC days, today included. Only days Vercel returned are overwritten (upsert with `synced_at = now`). A day Vercel left out (no traffic, or past its retention) gets a zero row only if none is stored yet, plus a `synced_at` touch; stored history is never zeroed. No upsert payload has `breakdown_synced_at`, so it is left alone.
+  4. Pending = window days whose breakdown isn't final, newest first. **Final-day rule:** final once `breakdown_synced_at ≥ day + 1 day + 1 h` (written at least an hour after the UTC day ended). Final days are never fetched again. Days older than 30 days can't be backfilled.
+  5. **Quiet days** (no pageviews per Vercel): no requests and nothing deleted. A quiet day is finalized (`breakdown_synced_at = now`) only once it is at least 2 full days past its end **and** its stored pageviews are 0, so a day that fell out of Vercel's retention keeps the breakdown stored earlier. Until then a later run re-checks it.
+     **Days with traffic:** one request per dimension (5 per day), 3 in flight. Each `(day, dimension)` is written through `analytics_replace_breakdown()`; `breakdown_synced_at = now` once all five are written.
+     **Empty-path guard:** if a day has traffic but its `path` breakdown comes back empty (Vercel hasn't caught up), that empty result isn't stored, the day isn't finalized and the run is `partial`; the next run retries. Once the day is 2+ full days old it is finalized anyway, like a quiet day.
+  6. **40 s budget:** no new Vercel request starts after 40 s (`budgetMs`), which fits `maxDuration = 60` on the cron route and the admin page. Unfinished days wait for the next run.
+  7. Failures: `rate_limited` or `token` stops new requests (`partial`); other Vercel errors skip just that request (`partial`). A breakdown write (or finalize) failure skips just that job and leaves the day unfinalized; after 3 such failures the run stops starting requests. Any of these makes the result `partial` with reason `storage`, which outranks every other reason. Only a failed daily-totals request (`error` with its reason) or a failed daily-totals read/write (`error` / `storage`) returns `error`.
+  Repeating a run is safe (upserts and atomic replaces), so a duplicate cron call is harmless.
+- **`SyncResult` contract** (`types.ts`):
+  ```ts
+  interface SyncResult {
+    status: "synced" | "partial" | "skipped" | "error";
+    reason?: "not_configured" | "token" | "unavailable" | "rate_limited" | "network" | "storage";
+    message?: string;          // plain English, safe to show the admin
+    lastSyncedAt: string | null; // ISO; newest stored sync, null when nothing has synced
+    daysUpdated: number;       // daily total rows written this run
+    breakdownDaysUpdated: number; // days whose full breakdown was written this run
+  }
+  ```
+  `syncAnalytics` returns Vercel-side problems as `ok(SyncResult)` with status `error` / `partial` so the page can explain them; it fails only for a preview session, bad input or a crash. The cron route maps it to HTTP: `200` for synced / partial / skipped, `503` for `not_configured` / `storage`, `502` for the Vercel-side reasons, `500` on a crash.
+- **Cron:** `vercel.json` → `GET /api/cron/analytics` at `30 0 * * *`. The route compares the `Authorization` header with `Bearer <CRON_SECRET>` in constant time (both SHA-256 hashed first); while `CRON_SECRET` is unset every request is `401`. Reading the header keeps the handler dynamic.
+- **Vercel's script:** `src/app/(site)/site-analytics.tsx` is a `"use client"` wrapper around `<Analytics>` from `@vercel/analytics/next` whose `beforeSend` drops `/admin` URLs. Only the public `(site)` layout renders it, so the layout stays static.
+- **Click tracking:**
+  - Events (`src/core/lib/track-events.ts`, pure): client `reel_open`, `source_link`, `social_click`, `email_click`, `whatsapp_click`, `media_kit_click`, `cta_click`; server-only `contact_sent`. Targets:
+    - `reel_open`, `source_link`: the uuid of an existing `media` row;
+    - `social_click`: `instagram-hero | instagram-nav | instagram-footer | instagram-contact | instagram-lightbox` (Instagram is named by placement), any other social a platform slug (the footer's `socialTarget()`, e.g. `youtube`);
+    - `cta_click`, `email_click`, `whatsapp_click`, `media_kit_click`, `contact_sent`: a placement (`hero`, `nav`, `floating`, `contact`, `form`).
+
+    Every non-media target must match `/^[a-z0-9_-]{1,32}$/` after `normalizeTarget()`. `sanitizeTarget()` removes control characters, collapses whitespace and cuts to 80 code points.
+  - Browser: theme elements carry `data-track={trackAttr(event, target)}`; `TrackClicks` (one delegated capture listener for click and middle-click, rendered by the theme's `SiteShell`) reports them through `track()` (`src/core/lib/track.ts`): production builds only, never on `/admin` or a local host (`localhost`, `127.0.0.1`, `[::1]`, `*.localhost`); the JSON is sent with `sendBeacon` as a plain string (`text/plain`, no CORS preflight), with a `fetch` `keepalive` fallback (also `text/plain`); never throws. Code can also call `track()` directly (the lightbox does for `reel_open`).
+  - Server: `submitInquiry` records `contact_sent` / `form` with `after()` once the inquiry is saved.
+- **`POST /api/track` drop rules.** Every request gets `204`, no body, `Cache-Control: no-store`, so a caller can't tell whether it counted. It is dropped when:
+  - `VERCEL_ENV !== "production"`, including unset (preview deployments, local `next start`);
+  - the user agent is empty or matches `bot|crawl|spider|slurp|headless|lighthouse|preview`;
+  - an `Origin` header is present and its host isn't the request's host (`x-forwarded-host`, else `host`); a missing `Origin` is allowed;
+  - the IP (`x-forwarded-for` first entry, else `x-real-ip`) has sent more than 60 hits in a 10-minute window (in-memory per instance; past 5000 IPs the oldest entries are evicted, so rotating IPs can't wipe everyone else's window);
+  - the body is over 1 KB (checked against `Content-Length` when sent, and while streaming, which stops reading at the cap), isn't JSON, or fails zod (`event` must be a client event, so `contact_sent` is rejected; `target` ≤ 200 chars). Any content type is read, so `text/plain` beacons work;
+  - the target fails the per-event check (`isValidTarget()`: a uuid for media events, else the slug pattern).
+
+  Accepted hits are counted with `after()` → `recordInteraction()`, which checks the production gate again, validates the target shape and confirms a media id exists before counting. The IP lives only in the throttle map and the user agent is only tested against the bot pattern; neither is stored.

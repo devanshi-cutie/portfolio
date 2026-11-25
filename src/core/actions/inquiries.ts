@@ -2,6 +2,8 @@
 
 import { refresh } from "next/cache";
 import { headers } from "next/headers";
+import { after } from "next/server";
+import { recordInteraction } from "@/core/analytics/interactions";
 import { requireAdmin } from "@/core/auth/guard";
 import { PREVIEW_ERROR, dbFail, invalid } from "@/core/db/errors";
 import { idSchema } from "@/core/schemas/common";
@@ -73,6 +75,8 @@ export async function submitInquiry(_prev: ActionResult | null, formData: FormDa
     console.error("[action] submitInquiry failed:", error.code ?? "", error.message);
     return fail("Something went wrong sending your message. Please try again.");
   }
+  // counted after the response; recordInteraction never throws
+  after(() => recordInteraction("contact_sent", "form"));
   return ok(undefined);
 }
 

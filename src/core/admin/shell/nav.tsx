@@ -6,6 +6,7 @@ import { useState } from "react";
 import {
   Building2,
   Camera,
+  ChartColumn,
   ExternalLink,
   FolderOpen,
   Images,
@@ -30,6 +31,7 @@ export const NAV_ITEMS = [
   { href: "/admin/brands", label: "Brands", icon: Building2 },
   { href: "/admin/testimonials", label: "Testimonials", icon: Quote },
   { href: "/admin/instagram", label: "Instagram", icon: Camera },
+  { href: "/admin/analytics", label: "Analytics", icon: ChartColumn },
   { href: "/admin/inquiries", label: "Inquiries", icon: Inbox },
 ] as const;
 

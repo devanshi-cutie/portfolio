@@ -23,6 +23,8 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { editedDimensions } from "@/core/cloudinary/urls";
+import { track } from "@/core/lib/track";
+import { trackAttr } from "@/core/lib/track-events";
 import type { MediaItem } from "@/core/types/content";
 import type { MediaMeta } from "../lib/media";
 import { isVideo, labelOf, posterOf, sourceLinkOf, videoSrcOf } from "../lib/media";
@@ -177,6 +179,18 @@ function Panel({ items, metas, index, onIndex, onClose, instagram, noun = "Item"
     return () => window.removeEventListener("keydown", onKey);
   }, [go, onClose, present]);
 
+  // Count each reel once per opening of the lightbox (open, next or prev).
+  const openedReels = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!present) {
+      openedReels.current.clear();
+      return;
+    }
+    if (!item || item.kind !== "reel" || openedReels.current.has(item.id)) return;
+    openedReels.current.add(item.id);
+    track("reel_open", item.id);
+  }, [item, present]);
+
   const onDragEnd = (_: unknown, info: PanInfo) => {
     if (info.offset.x < -60 || info.velocity.x < -400) go(1);
     else if (info.offset.x > 60 || info.velocity.x > 400) go(-1);
@@ -257,6 +271,7 @@ function Panel({ items, metas, index, onIndex, onClose, instagram, noun = "Item"
                   href={source.href}
                   target="_blank"
                   rel="noopener noreferrer"
+                  data-track={trackAttr("source_link", item.id)}
                   className="group/src flex min-h-11 flex-col justify-center py-1"
                 >
                   <span className="inline-flex items-center gap-1.5 text-sm font-semibold underline decoration-(--blush) underline-offset-4 group-hover/src:text-(--blush)">
@@ -336,6 +351,7 @@ function Stage({ item, instagram, autoPlay }: { item: MediaItem; instagram: stri
           href={source?.href ?? instagram}
           target="_blank"
           rel="noopener noreferrer"
+          data-track={source ? trackAttr("source_link", item.id) : trackAttr("social_click", "instagram-lightbox")}
           className="inline-flex min-h-11 items-center text-sm font-semibold underline underline-offset-4"
         >
           {source?.label ?? "Watch on Instagram"}

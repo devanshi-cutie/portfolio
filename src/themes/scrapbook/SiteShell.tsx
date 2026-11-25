@@ -1,4 +1,5 @@
 import type { CSSProperties, ReactNode } from "react";
+import { TrackClicks } from "@/core/lib/track-clicks";
 import type { SiteContent } from "@/core/types/content";
 import { Footer } from "./components/Footer";
 import { Nav, type NavLink } from "./components/Nav";
@@ -55,6 +56,8 @@ export function SiteShell({ content, children }: { content: SiteContent; childre
       <Footer content={content} />
       <div id="sb-portal" />
       <div aria-hidden className="sb-grain" />
+      {/* counts clicks on [data-track] elements; renders nothing */}
+      <TrackClicks />
     </div>
   );
 }

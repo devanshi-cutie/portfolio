@@ -10,6 +10,7 @@ import { Menu, X } from "lucide-react";
 import { AnimatePresence, motion, useIsPresent, useMotionValueEvent, useReducedMotion, useScroll } from "motion/react";
 import Link from "next/link";
 import { useEffect, useRef, useState, type RefObject } from "react";
+import { trackAttr } from "@/core/lib/track-events";
 import { cn } from "../lib/cn";
 import { EASE_IN, EASE_OUT } from "../motion/easing";
 import { buttonClass } from "./Button";
@@ -98,7 +99,11 @@ export function Nav({
 
           <div className="flex items-center gap-2">
             {cta && !open ? (
-              <Link href={cta.href} className={buttonClass("primary", "hidden min-h-11 px-5 text-sm sm:inline-flex")}>
+              <Link
+                href={cta.href}
+                data-track={trackAttr("cta_click", "nav")}
+                className={buttonClass("primary", "hidden min-h-11 px-5 text-sm sm:inline-flex")}
+              >
                 {cta.label}
               </Link>
             ) : null}
@@ -247,7 +252,7 @@ function MobileMenu({
       </ul>
       <div className="flex flex-col items-start gap-5">
         {cta ? (
-          <Link href={cta.href} onClick={onClose} className={buttonClass("paper")}>
+          <Link href={cta.href} onClick={onClose} data-track={trackAttr("cta_click", "nav")} className={buttonClass("paper")}>
             {cta.label}
           </Link>
         ) : null}
@@ -255,6 +260,7 @@ function MobileMenu({
           href={instagram}
           target="_blank"
           rel="noopener noreferrer"
+          data-track={trackAttr("social_click", "instagram-nav")}
           className="inline-flex min-h-11 items-center text-base font-semibold underline decoration-(--blush) underline-offset-4"
         >
           @{handle} on Instagram

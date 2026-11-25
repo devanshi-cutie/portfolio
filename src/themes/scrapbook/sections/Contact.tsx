@@ -1,4 +1,5 @@
 import { ArrowUpRight, AtSign, Mail, MessageCircle, Phone } from "lucide-react";
+import { trackAttr } from "@/core/lib/track-events";
 import type { SectionConfig, SiteContent } from "@/core/types/content";
 import { ContactForm } from "../components/ContactForm";
 import { Arrow } from "../components/Doodles";
@@ -12,11 +13,23 @@ export function Contact({ content, section }: { content: SiteContent; section: S
   const ig = instagramUrl(content);
   const wa = contact.whatsapp.replace(/\D/g, "");
   const channels = [
-    contact.email && { href: `mailto:${contact.email}`, label: contact.email, Icon: Mail, external: false },
-    wa && { href: `https://wa.me/${wa}`, label: "WhatsApp", Icon: MessageCircle, external: true },
+    contact.email && {
+      href: `mailto:${contact.email}`,
+      label: contact.email,
+      Icon: Mail,
+      external: false,
+      track: trackAttr("email_click", "contact"),
+    },
+    wa && {
+      href: `https://wa.me/${wa}`,
+      label: "WhatsApp",
+      Icon: MessageCircle,
+      external: true,
+      track: trackAttr("whatsapp_click", "contact"),
+    },
     contact.phone && { href: `tel:${contact.phone.replace(/[^\d+]/g, "")}`, label: contact.phone, Icon: Phone, external: false },
-    { href: ig, label: `DM @${identity.handle}`, Icon: AtSign, external: true },
-  ].filter(Boolean) as { href: string; label: string; Icon: typeof Mail; external: boolean }[];
+    { href: ig, label: `DM @${identity.handle}`, Icon: AtSign, external: true, track: trackAttr("social_click", "instagram-contact") },
+  ].filter(Boolean) as { href: string; label: string; Icon: typeof Mail; external: boolean; track?: string }[];
 
   return (
     <section id="contact" aria-labelledby="contact-title" className="relative px-(--gutter) py-12 md:py-28">
@@ -25,11 +38,12 @@ export function Contact({ content, section }: { content: SiteContent; section: S
           <SectionHeading id="contact-title" section={section} eyebrow size="md" />
           <Reveal delay={0.05}>
             <ul className="mt-10 flex flex-col gap-3">
-              {channels.map(({ href, label, Icon, external }) => (
+              {channels.map(({ href, label, Icon, external, track }) => (
                 <li key={href}>
                   <a
                     href={href}
                     {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+                    data-track={track}
                     className="group inline-flex min-h-12 min-w-0 max-w-full items-center gap-3 text-lg font-semibold"
                   >
                     <span className="grid size-11 shrink-0 place-items-center rounded-full border-[1.5px] border-(--ink) transition-[background-color,color] duration-150 group-hover:bg-(--ink) group-hover:text-(--cream)">
@@ -47,6 +61,7 @@ export function Contact({ content, section }: { content: SiteContent; section: S
                 href={contact.mediaKitUrl}
                 target="_blank"
                 rel="noopener noreferrer"
+                data-track={trackAttr("media_kit_click", "contact")}
                 className="mt-8 inline-flex min-h-11 items-center gap-1.5 text-[0.95rem] font-semibold text-(--rose-deep) hover:underline hover:underline-offset-4"
               >
                 Media kit

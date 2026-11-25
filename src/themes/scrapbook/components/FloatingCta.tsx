@@ -10,6 +10,7 @@ import { ArrowRight } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { trackAttr } from "@/core/lib/track-events";
 import { EASE_IN, EASE_OUT } from "../motion/easing";
 
 export function FloatingCta({ label, href = "#contact" }: { label: string; href?: string }) {
@@ -55,6 +56,7 @@ export function FloatingCta({ label, href = "#contact" }: { label: string; href?
         >
           <Link
             href={href}
+            data-track={trackAttr("cta_click", "floating")}
             className="pointer-events-auto inline-flex min-h-12 items-center gap-2 rounded-full bg-(--rose-deep) px-6 text-[0.95rem] font-semibold text-(--cream) shadow-[0_14px_30px_-10px_rgb(44_17_25/0.55)] transition-[background-color,transform] duration-150 active:scale-[0.97]"
           >
             {label}

@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { siteUrl } from "@/core/config/env";
 import { getSiteContent } from "@/core/data/site";
 import theme from "@/themes/active";
+import { SiteAnalytics } from "./site-analytics";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { settings } = await getSiteContent();
@@ -33,5 +34,11 @@ export const viewport: Viewport = {
 
 export default async function SiteLayout({ children }: { children: ReactNode }) {
   const content = await getSiteContent();
-  return <theme.SiteShell content={content}>{children}</theme.SiteShell>;
+  return (
+    <>
+      <theme.SiteShell content={content}>{children}</theme.SiteShell>
+      {/* client-only; its own Suspense boundary keeps the site prerendered */}
+      <SiteAnalytics />
+    </>
+  );
 }

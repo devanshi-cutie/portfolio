@@ -60,6 +60,10 @@ Copy `.env.example` to `.env.local` and fill it in. Every variable is explained 
 | `NEXT_PUBLIC_CLOUDINARY_FOLDER` | Root folder in Cloudinary (default `devanshi`) |
 | `ADMIN_PASSWORD` | **The password for `/admin`.** Use a long passphrase. |
 | `ADMIN_SESSION_SECRET` | Optional. Signs login cookies; derived from the password if empty |
+| `VERCEL_ANALYTICS_TOKEN` | Optional. Vercel token for the admin's Analytics tab (server-only, see **Analytics** below) |
+| `VERCEL_ANALYTICS_PROJECT_ID` | Optional. The Vercel project ID (`prj_…`) the Analytics tab reads |
+| `VERCEL_ANALYTICS_TEAM_ID` | Only with a **Full Account** token: the team ID (`team_…`). Leave empty for a project-scoped token |
+| `CRON_SECRET` | Protects the daily analytics copy job. 16+ letters and digits; Vercel sends it automatically |
 | `SEED_*` | Seed script options (size limits, data folder) |
 | `ALLOW_PREVIEW_CONTENT` | Leave empty. Set to `1` only to build/deploy a demo without Supabase |
 
@@ -102,6 +106,7 @@ Go to `/admin` and enter the password; the sign-in page greets her by name with 
 - **Brands**: add brands she has worked with, upload logos, tag UGC/Instagram, feature, reorder
 - **Testimonials** and **Inquiries** (messages from the contact form)
 - **Instagram**: click Refresh to get her current followers, posts and reel views from Instagram, compare them with the numbers on the site, and update the ones she ticks (see below)
+- **Analytics**: visits from Vercel Web Analytics (pageviews, visitors, top pages, referrers, countries, devices, browsers) and the clicks the site counts itself (reel opens, contact buttons, social links…), for the last 7 days up to all time (see below)
 
 Changes go live on the public site straight away. The link preview card (what WhatsApp, Instagram, LinkedIn and X show when the site is shared) is generated from her name, tagline, featured brands and portrait (or the share image set under Profile & SEO); it refreshes on the next deploy, and the apps themselves cache previews for a while. If you ever edit data directly in Supabase or re-run the seed after deploying, press **Refresh live site** on the admin dashboard.
 
@@ -130,6 +135,27 @@ If the dashboard asks for an Instagram tester: *App roles → Roles* → add her
 **What isn't:** stories, likes, comments, follower demographics, other people's accounts, and anything automatic. Brand and reel counts don't come from Instagram: set a number's source to *Brands on this site* or *Reels on this site* and it's counted from the published content automatically.
 
 **Choosing which numbers update:** in Page sections → Numbers, each number has a **Source**: typed by hand, one of the Instagram metrics, or one of the site counts. Only numbers with an Instagram source appear in the review table, and the table can add a missing Instagram metric to the list. Labels and order are still edited in Page sections.
+
+## Analytics (Vercel Web Analytics + click counts)
+
+Admin → Analytics shows two things: **visits** from Vercel Web Analytics (pageviews, visitors, top pages, referrers, countries, devices, browsers), and **clicks** the site counts itself. Click counts only need Supabase. Visits need a Vercel token; without it the tab shows the setup steps below.
+
+**Setup:**
+
+1. Vercel → this project → **Analytics** → **Enable Web Analytics**, then redeploy. The site already includes Vercel's script; admin pages are never counted.
+2. [vercel.com/account/tokens](https://vercel.com/account/tokens) → **Create Token**. Set the scope to **this project only** and pick an expiry. Vercel has no read-only token, so a project-scoped token is the narrowest option.
+3. Project → **Settings → General** → copy the **Project ID** (starts with `prj_`).
+4. In Vercel → **Settings → Environment Variables**, add for **Production**: `VERCEL_ANALYTICS_TOKEN` (the token), `VERCEL_ANALYTICS_PROJECT_ID` (the project ID) and `CRON_SECRET` (a random string of 16+ letters and digits). Add `VERCEL_ANALYTICS_TEAM_ID` (`team_…`) only if you made a **Full Account** token instead. Redeploy.
+
+All four are server-only: never prefix them with `NEXT_PUBLIC_`, and the admin panel never shows them. When the token expires or is revoked, the tab says Vercel rejected it: create a new one (step 2), replace `VERCEL_ANALYTICS_TOKEN` and redeploy. History already copied is unaffected.
+
+**On the free Hobby plan:** Vercel keeps 1 month of data and caps Web Analytics at 50,000 events a month. Vercel doesn't document API access for Hobby, so the tab may say the analytics API is **unavailable**. Click counts work either way.
+
+**How history is kept:** the numbers are copied into Supabase, so they outlive Vercel's 1 month. A copy runs when the Analytics tab is opened (at most once every 10 minutes; **Refresh from Vercel** runs it straight away) and once a day at 00:30 UTC from a Vercel Cron job (`vercel.json`), which Vercel authorizes with `CRON_SECRET`. Each copy covers the last 30 days, so that is all that can be backfilled on day one; "Last 90 days" and longer fill in over time. All days are UTC.
+
+**Visitors are unique per day.** Vercel counts a visitor once a day (no cookies). Over several days the tab adds the daily numbers, so someone who came back on three days counts three times. Read it as "visits", not "people".
+
+**Clicks counted:** reel opened, "view original post", social links (Instagram and others), email link, WhatsApp, media kit, the contact buttons (hero, top menu, floating button), and contact-form sends. Each is stored only as a count per day, click type and target (which reel, which button). No IP, cookie, user agent or anything else about the visitor is stored. Do Not Track isn't honoured, since nothing personal is kept. Local dev, preview deployments and obvious bots aren't counted.
 
 ## 7. Reusing this for another creator
 

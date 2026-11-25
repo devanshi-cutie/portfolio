@@ -1,5 +1,6 @@
 import { ArrowRight } from "lucide-react";
 import type { CSSProperties } from "react";
+import { trackAttr } from "@/core/lib/track-events";
 import type { SectionConfig, SiteContent } from "@/core/types/content";
 import { ButtonLink } from "../components/Button";
 import { Swash } from "../components/Doodles";
@@ -83,7 +84,7 @@ export function Hero({ content, section }: { content: SiteContent; section: Sect
           <div className="sb-rise mt-6 flex flex-wrap items-center gap-3 md:mt-9" style={d(240)}>
             {hasContact ? (
               <Magnet>
-                <ButtonLink href="#contact" variant="primary" className="group">
+                <ButtonLink href="#contact" variant="primary" className="group" data-track={trackAttr("cta_click", "hero")}>
                   {contact.ctaLabel || "Work with me"}
                   <ArrowRight
                     className="size-4 transition-transform duration-150 group-hover:translate-x-0.5"
@@ -92,7 +93,7 @@ export function Hero({ content, section }: { content: SiteContent; section: Sect
                 </ButtonLink>
               </Magnet>
             ) : null}
-            <ButtonLink href={ig} external variant="ghost">
+            <ButtonLink href={ig} external variant="ghost" data-track={trackAttr("social_click", "instagram-hero")}>
               @{identity.handle}
             </ButtonLink>
           </div>
