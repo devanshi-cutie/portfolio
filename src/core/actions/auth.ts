@@ -3,8 +3,6 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { isAdminPasswordConfigured } from "@/core/auth/mode";
-import { adminCounter, loginConsent } from "@/core/config/admin-extras";
-import { incrementCounter } from "@/core/data/counters";
 import { checkAdminPassword, clearSession, createSession } from "@/core/auth/session";
 import { fail, type ActionResult } from "./result";
 
@@ -91,13 +89,6 @@ export async function signIn(_prev: ActionResult | null, formData: FormData): Pr
     return fail("Too many attempts. Please wait 15 minutes and try again.");
   }
 
-  // Creator-specific consent checkbox (src/creators/<id> → admin.loginConsent): enforced here,
-  // not just in the browser. Checked before the password, and not counted as a failed attempt.
-  const consent = loginConsent();
-  if (consent && formData.get("consent") !== "yes") {
-    return fail(consent.error, { consent: [consent.error] });
-  }
-
   const raw = formData.get("password");
   const password = typeof raw === "string" ? raw : "";
   if (password === "" || password.length > MAX_PASSWORD_LENGTH || !checkAdminPassword(password)) {
@@ -109,8 +100,6 @@ export async function signIn(_prev: ActionResult | null, formData: FormData): Pr
 
   failures.delete(ip);
   await createSession();
-  const counter = adminCounter();
-  if (counter) await incrementCounter(counter.key, counter.perLogin);
   redirect(safeNext(formData.get("next")));
 }
 

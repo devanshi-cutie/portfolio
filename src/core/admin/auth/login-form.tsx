@@ -1,42 +1,28 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState, type FormEvent } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Check, CircleAlert, Eye, EyeOff, HeartCrack, LockKeyhole } from "lucide-react";
+import { CircleAlert, Eye, EyeOff, LockKeyhole } from "lucide-react";
 import { signIn } from "@/core/actions/auth";
 import type { ActionResult } from "@/core/actions/result";
 import { Button } from "../ui/button";
 
 type LoginState = (ActionResult & { attempt: number }) | null;
 
-export interface LoginConsent {
-  label: string;
-  error: string;
-}
-
 /**
- * Single-password sign-in (ADMIN_PASSWORD), plus an optional creator-specific
- * consent checkbox that must be ticked (also enforced by the server action).
- * Errors shake their field (3 times over ~300ms, skipped with reduced motion)
- * and move focus back to it.
+ * Single-password sign-in (ADMIN_PASSWORD). Errors shake the field (3 times
+ * over ~300ms, skipped with reduced motion) and move focus back to it.
  */
-export function LoginForm({ disabled = false, consent = null }: { disabled?: boolean; consent?: LoginConsent | null }) {
+export function LoginForm({ disabled = false }: { disabled?: boolean }) {
   const next = useSearchParams().get("next") ?? "";
   const [state, formAction, pending] = useActionState<LoginState, FormData>(async (prev, formData) => {
     const result = await signIn(prev, formData);
     return { ...result, attempt: (prev?.attempt ?? 0) + 1 };
   }, null);
   const [visible, setVisible] = useState(false);
-  const [agreed, setAgreed] = useState(false);
-  // client-side consent refusals (no round trip); bumping it re-triggers the shake
-  const [refusals, setRefusals] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
-  const consentRef = useRef<HTMLInputElement>(null);
 
-  const serverError = state && !state.ok ? state : null;
-  const serverConsentError = serverError?.fieldErrors?.consent?.[0] ?? null;
-  const consentError = consent && !agreed && (refusals > 0 || serverConsentError) ? consent.error : null;
-  const passwordError = serverError && !serverConsentError ? serverError.error : null;
+  const passwordError = state && !state.ok ? state.error : null;
 
   useEffect(() => {
     if (!passwordError) return;
@@ -44,19 +30,8 @@ export function LoginForm({ disabled = false, consent = null }: { disabled?: boo
     inputRef.current?.select();
   }, [passwordError, state?.attempt]);
 
-  useEffect(() => {
-    if (consentError) consentRef.current?.focus();
-  }, [consentError, refusals, state?.attempt]);
-
-  function onSubmit(e: FormEvent<HTMLFormElement>) {
-    if (consent && !agreed) {
-      e.preventDefault();
-      setRefusals((n) => n + 1);
-    }
-  }
-
   return (
-    <form action={formAction} onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
+    <form action={formAction} className="flex flex-col gap-4" noValidate>
       <input type="hidden" name="next" value={next} />
       <div className="flex flex-col gap-1.5">
         <label htmlFor="password" className="text-sm font-medium text-(--a-ink)">
@@ -98,46 +73,6 @@ export function LoginForm({ disabled = false, consent = null }: { disabled?: boo
           </p>
         ) : null}
       </div>
-
-      {consent ? (
-        <div className="flex flex-col gap-1.5">
-          <div key={`${refusals}-${state?.attempt ?? 0}`} className={consentError ? "adm-shake" : undefined}>
-            <label
-              className={`flex cursor-pointer items-start gap-3 rounded-2xl border p-3 text-sm leading-snug transition-colors duration-150 ${
-                agreed
-                  ? "border-(--a-primary) bg-(--a-blush)/40 text-(--a-ink)"
-                  : consentError
-                    ? "border-(--a-primary) bg-(--a-surface) text-(--a-ink)"
-                    : "border-(--a-line-strong) bg-(--a-surface) text-(--a-ink) hover:border-(--a-primary)"
-              }`}
-            >
-              {/* real checkbox (keyboard + screen readers), drawn as a heart-red tick box */}
-              <span className="relative mt-0.5 grid size-5 shrink-0 place-items-center">
-                <input
-                  ref={consentRef}
-                  type="checkbox"
-                  name="consent"
-                  value="yes"
-                  checked={agreed}
-                  onChange={(e) => setAgreed(e.target.checked)}
-                  disabled={disabled}
-                  aria-invalid={consentError ? true : undefined}
-                  aria-describedby={consentError ? "consent-error" : undefined}
-                  className="peer size-5 cursor-pointer appearance-none rounded-md border-2 border-(--a-primary) bg-(--a-muted) transition-colors duration-150 checked:bg-(--a-primary) focus-visible:ring-2 focus-visible:ring-(--a-primary) focus-visible:ring-offset-2 focus-visible:outline-none"
-                />
-                <Check aria-hidden className="pointer-events-none absolute size-3.5 text-(--a-primary-ink) opacity-0 transition-opacity duration-100 peer-checked:opacity-100" strokeWidth={3} />
-              </span>
-              <span>{consent.label}</span>
-            </label>
-          </div>
-          {consentError ? (
-            <p id="consent-error" role="alert" className="flex items-center gap-1.5 text-sm font-medium text-(--a-primary)">
-              <HeartCrack className="size-4 shrink-0" aria-hidden />
-              {consentError}
-            </p>
-          ) : null}
-        </div>
-      ) : null}
 
       <Button type="submit" variant="primary" pending={pending} disabled={disabled} className="h-12 w-full justify-center rounded-full text-base">
         {pending ? "Checking…" : "Enter the studio"}

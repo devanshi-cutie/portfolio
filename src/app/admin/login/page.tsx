@@ -5,7 +5,6 @@ import { getSiteContent } from "@/core/data/site";
 import { imageUrl } from "@/core/cloudinary/urls";
 import { isAdminPasswordConfigured, isAdminPreviewMode } from "@/core/auth/mode";
 import { LoginForm } from "@/core/admin/auth/login-form";
-import { loginConsent } from "@/core/config/admin-extras";
 import { TimeGreeting } from "@/core/admin/auth/greeting";
 
 export const metadata: Metadata = { title: "Sign in" };
@@ -84,7 +83,7 @@ export default async function LoginPage() {
               )
             ) : (
               <Suspense>
-                <LoginForm consent={loginConsent()} />
+                <LoginForm />
               </Suspense>
             )}
           </div>

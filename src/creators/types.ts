@@ -26,26 +26,6 @@ export interface CreatorPackage {
   brands: BrandSeed[];
   testimonials: TestimonialSeed[];
   media: MediaSeed[];
-  /** optional personal touches for this creator's admin panel (code config, not editable in the admin) */
-  admin?: CreatorAdminExtras;
-}
-
-export interface CreatorAdminExtras {
-  /** a checkbox that must be ticked to sign in */
-  loginConsent?: {
-    label: string;
-    /** shown when someone tries to sign in without ticking it */
-    error: string;
-  };
-  /** a counter in the admin header: +perLogin on every sign-in, +perView on every admin page open/refresh */
-  counter?: {
-    /** stable key in the admin_counters table */
-    key: string;
-    /** text after the number, e.g. "times Devanshi agreed she likes ADDI" */
-    label: string;
-    perLogin: number;
-    perView: number;
-  };
 }
 
 export interface CollectionSeed {

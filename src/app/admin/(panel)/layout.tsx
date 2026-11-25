@@ -6,8 +6,6 @@ import { cloudinaryFolder, env, isCloudinaryConfigured, isSupabaseConfigured } f
 import { signOut } from "@/core/actions/auth";
 import { AdminConfigProvider, type AdminConfig } from "@/core/admin/config-context";
 import { MobileNav, Sidebar, ViewSiteLink } from "@/core/admin/shell/nav";
-import { LikeCounter } from "@/core/admin/shell/like-counter";
-import { adminCounter } from "@/core/config/admin-extras";
 import { TooltipProvider } from "@/core/admin/ui/tooltip";
 import { Button } from "@/core/admin/ui/button";
 import { PageSkeleton } from "@/core/admin/ui/misc";
@@ -23,7 +21,6 @@ export const instant = false;
 
 export default async function PanelLayout({ children }: { children: ReactNode }) {
   const { settings } = await getSiteContent();
-  const counter = adminCounter();
   const config: AdminConfig = {
     preview: !isSupabaseConfigured(),
     // the browser widget needs the cloud name and the public API key
@@ -43,7 +40,6 @@ export default async function PanelLayout({ children }: { children: ReactNode })
               <MobileNav />
               <span className="adm-display truncate text-base whitespace-nowrap lg:hidden">{settings.identity.name || "Site admin"}</span>
               <div className="ml-auto flex items-center gap-1">
-                {counter && !config.preview ? <LikeCounter label={counter.label} /> : null}
                 <ViewSiteLink />
                 <Suspense fallback={null}>
                   <AccountMenu />
