@@ -31,7 +31,7 @@ const DISABLED_HINT_ID = "analytics-refresh-hint";
 const PREVIEW_NOTE_ID = "analytics-preview-note";
 
 /** Failures the admin fixes in Vercel's settings, so the setup steps open with the message. */
-const SETUP_REASONS: ReadonlySet<AnalyticsFailReason> = new Set(["token", "unavailable", "not_configured"]);
+const SETUP_REASONS: ReadonlySet<AnalyticsFailReason> = new Set(["token", "access", "unavailable", "not_configured"]);
 
 const BREAKDOWNS: { dimension: AnalyticsDimension; title: string; empty: string }[] = [
   { dimension: "path", title: "Top pages", empty: "No page visits in this range." },

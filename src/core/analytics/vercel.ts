@@ -43,7 +43,9 @@ export function analyticsReasonMessage(reason: AnalyticsFailReason): string {
     case "not_configured":
       return "Vercel Analytics isn't connected yet. Add VERCEL_ANALYTICS_TOKEN and VERCEL_ANALYTICS_PROJECT_ID in Vercel, then redeploy.";
     case "token":
-      return "Vercel rejected the analytics token. Create a new one and replace VERCEL_ANALYTICS_TOKEN in Vercel, then redeploy.";
+      return "Vercel says the analytics token is invalid or expired. Check that VERCEL_ANALYTICS_TOKEN holds the whole token (no quotes or spaces) for Production, then redeploy.";
+    case "access":
+      return "Vercel accepted the token, but it can't read this project's analytics. If the project belongs to a team (most accounts do now), set VERCEL_ANALYTICS_TEAM_ID to the team ID (Team Settings → General, starts with team_), check VERCEL_ANALYTICS_PROJECT_ID, then redeploy.";
     case "unavailable":
       return "Vercel's analytics API isn't available for this project yet (Web Analytics may be off, or the plan may not include API access).";
     case "rate_limited":
@@ -61,8 +63,13 @@ export function friendlyAnalyticsError(err: unknown): string {
   return "Something went wrong syncing analytics. Please try again.";
 }
 
-function reasonForStatus(status: number): AnalyticsFailReason {
-  if (status === 401 || status === 403) return "token";
+function reasonForStatus(status: number, body: unknown): AnalyticsFailReason {
+  if (status === 401 || status === 403) {
+    // Vercel answers 403 both for a bad token (error.invalidToken / missingToken)
+    // and for a valid token that can't see the project (e.g. teamId missing).
+    const flags = (body as { error?: { invalidToken?: unknown; missingToken?: unknown } } | null)?.error;
+    return flags?.invalidToken === true || flags?.missingToken === true || status === 401 ? "token" : "access";
+  }
   if (status === 429) return "rate_limited";
   // 404 ("Web Analytics not found"), other 4xx (bad query) and 5xx
   return "unavailable";
@@ -102,7 +109,7 @@ async function query(cfg: VercelAnalyticsConfig, params: Record<string, string>)
 
   if (!res.ok) {
     const code = errorCode(body);
-    throw new VercelAnalyticsError(reasonForStatus(res.status), `HTTP ${res.status}${code ? ` ${code}` : ""}`, res.status);
+    throw new VercelAnalyticsError(reasonForStatus(res.status, body),`HTTP ${res.status}${code ? ` ${code}` : ""}`, res.status);
   }
   if (body === null) throw new VercelAnalyticsError("unavailable", "Response was not JSON", res.status);
   return body;

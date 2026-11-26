@@ -256,7 +256,7 @@ async function syncWindow(
       } catch (err) {
         logFailure(`breakdown ${day} ${dim}`, err);
         const reason = err instanceof VercelAnalyticsError ? err.reason : "network";
-        if (reason === "rate_limited" || reason === "token") {
+        if (reason === "rate_limited" || reason === "token" || reason === "access") {
           // stop starting requests; keep the first fatal reason
           fatalVercel ??= reason;
           stopped = true;

@@ -19,7 +19,8 @@ export interface AnalyticsStatus {
   storageReady: boolean;
 }
 
-export type AnalyticsFailReason = "not_configured" | "token" | "unavailable" | "rate_limited" | "network" | "storage";
+/** token: Vercel says the token itself is invalid; access: the token is valid but can't read this project (usually a missing team ID) */
+export type AnalyticsFailReason = "not_configured" | "token" | "access" | "unavailable" | "rate_limited" | "network" | "storage";
 
 export interface SyncResult {
   /** "partial": some data stored, the rest will sync next time */
